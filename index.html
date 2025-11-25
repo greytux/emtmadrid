@@ -1,1188 +1,1185 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>🐶Turrobuses</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root {
-      --bg: #e5e7eb;
-      --card-bg: #ffffff;
-      --surface: #f9fafb;
-      --primary: #005bb7;
-      --primary-soft: rgba(0,91,183,0.06);
-      --urgent: #fee2e2;
-      --soon: #dcfce7;
-      --text: #111827;
-      --muted: #6b7280;
-      --border-subtle: #e5e7eb;
-      --shadow-soft: 0 18px 40px rgba(15,23,42,0.12);
-      --radius-lg: 18px;
-      --radius-md: 12px;
-      --radius-pill: 999px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 24px 12px;
-
-      /* Fondo azul oscuro con blur */
-      background: radial-gradient(circle at 30% 20%, rgba(29,78,216,0.45), transparent 60%),
-      radial-gradient(circle at 80% 80%, rgba(2,132,199,0.45), transparent 55%),
-      #0b1220;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-
-      color: var(--text);
-    }
-
-    .app-shell {
-      width: 100%;
-      max-width: 720px;
-      background: rgba(255,255,255,0.92);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 18px 40px rgba(15,23,42,0.32);
-      border: 1px solid rgba(148,163,184,0.35);
-      overflow: hidden;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    /* Header superior */
-    .app-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px 10px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: linear-gradient(135deg, #ffffff, #eff6ff);
-    }
-
-    .title-block {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    h1 {
-      font-size: 20px;
-      font-weight: 650;
-      margin: 0;
-      letter-spacing: 0.01em;
-      color: #0f172a;
-    }
-
-    .subtitle {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .refresh-block {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-    }
-
-    /* Botón redondo de refrescar */
-    .refresh-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: none;
-      background: #005bb7;
-      color: #ffffff;
-      padding: 0;
-      font-size: 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      outline: none;
-      box-shadow: 0 4px 10px rgba(15,23,42,0.35);
-      transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .refresh-btn span.icon {
-      font-size: 18px;
-      line-height: 1;
-    }
-
-    .refresh-btn:hover {
-      background: #0a6cff;
-      box-shadow: 0 6px 14px rgba(15,23,42,0.4);
-    }
-
-    .refresh-btn:active {
-      transform: scale(0.9);
-      box-shadow: 0 2px 6px rgba(15,23,42,0.3);
-    }
-
-    .refresh-spin {
-      animation: spin 0.6s linear infinite;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
-
-    .last-update-global {
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-    /* Legend */
-    .legend {
-      font-size: 11px;
-      color: var(--muted);
-      padding: 8px 20px 10px;
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      background: #f9fafb;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .legend-color {
-      width: 14px;
-      height: 14px;
-      border-radius: 4px;
-      border: 1px solid rgba(148,163,184,0.6);
-    }
-
-    .legend-color.red {
-      background: #fecaca;
-    }
-
-    .legend-color.green {
-      background: #bbf7d0;
-    }
-
-    /* Accordion de paradas */
-    .accordion {
-      padding: 10px 14px 14px;
-      background: var(--surface);
-    }
-
-    .accordion-item {
-      background: #ffffff;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-subtle);
-      margin-bottom: 10px;
-      overflow: hidden;
-      transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.12s ease-out;
-    }
-
-    .accordion-item.open {
-      border-color: rgba(37,99,235,0.85);
-      box-shadow: 0 10px 20px rgba(15,23,42,0.15);
-      transform: translateY(-1px);
-    }
-
-    .accordion-header {
-      width: 100%;
-      text-align: left;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      padding: 10px 12px 8px 12px;
-      font-size: 14px;
-      font-weight: 550;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .accordion-header-main {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
-    }
-
-    .stop-name {
-      font-size: 14px;
-    }
-
-    .stop-subtitle {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .accordion-header span.badge {
-      font-size: 14px;
-      font-weight: 700;
-      padding: 5px 14px;
-      border-radius: var(--radius-pill);
-      border: 1px solid rgba(37,99,235,0.9);
-      color: #1d4ed8;
-      background: #dbeafe;
-      margin-left: auto;
-    }
-
-    .accordion-header::after {
-      content: "▾";
-      font-size: 13px;
-      margin-left: 8px;
-      color: var(--muted);
-      transition: transform 0.18s ease-out, color 0.18s ease-out;
-    }
-
-    .accordion-item.open .accordion-header::after {
-      transform: rotate(180deg);
-      color: var(--primary);
-    }
-
-    .accordion-panel {
-      display: none;
-      padding: 0 12px 10px;
-      border-top: 1px solid #e5e7eb;
-      background: #f9fafb;
-    }
-
-    .accordion-item.open .accordion-panel {
-      display: block;
-    }
-
-    .status {
-      font-size: 11px;
-      color: var(--muted);
-      margin: 6px 0 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #22c55e;
-    }
-
-    .status.error .status-dot {
-      background: #f97373;
-    }
-
-    .walk-time {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    .reach-time {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .bus-list {
-      list-style: none;
-      padding: 0;
-      margin: 4px 0 0 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .bus-item {
-      background: #ffffff;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
-      font-size: 12px;
-      padding: 8px 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .bus-item.soon {
-      border-color: #86efac;
-      background: var(--soon);
-    }
-
-    .bus-item.urgent {
-      border-color: #fecaca;
-      background: var(--urgent);
-    }
-
-    .bus-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    /* Panel LED para la línea */
-    .line-badge {
-      position: relative;
-      min-width: 70px;
-      height: 32px;
-      border-radius: 6px;
-      overflow: hidden;
-      padding: 0 6px;
-      background:
-              radial-gradient(circle, rgba(148,163,184,0.75) 12%, transparent 14%) 0 0 / 9px 9px repeat,
-              #020617;
-      box-shadow:
-              inset 0 0 5px rgba(0,0,0,0.9),
-              0 4px 8px rgba(15,23,42,0.35);
-      border: 1px solid rgba(15,23,42,0.95);
-      display: flex;
-      align-items: center;
-    }
-
-    .line-text {
-      display: inline-block;
-      white-space: nowrap;
-      padding-left: 100%;
-      font-family: "Courier New", ui-monospace, monospace;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: 4px;
-      color: #facc15;
-      text-shadow:
-              0 0 3px rgba(251,191,36,0.9),
-              0 0 6px rgba(251,146,60,0.9),
-              0 0 10px rgba(248,113,113,0.7);
-      animation: led-scroll 4s linear infinite;
-    }
-
-    @keyframes led-scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
-    .bus-text {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-
-    .bus-main {
-      font-size: 13px;
-      font-weight: 550;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      color: #111827;
-    }
-
-    .bus-sub {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .bus-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .pill-minutes {
-      padding: 3px 10px;
-      border-radius: var(--radius-pill);
-      font-size: 12px;
-      font-weight: 650;
-      letter-spacing: 0.02em;
-      border: 1px solid rgba(148,163,184,0.7);
-      background: #ffffff;
-      color: #111827;
-    }
-
-    .bus-item.urgent .pill-minutes {
-      border-color: #b91c1c;
-      background: #fee2e2;
-      color: #7f1d1d;
-    }
-
-    .bus-item.soon .pill-minutes {
-      border-color: #15803d;
-      background: #dcfce7;
-      color: #14532d;
-    }
-
-    .pill-label {
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-    .empty {
-      font-size: 12px;
-      color: var(--muted);
-      font-style: italic;
-      padding: 4px 2px 6px;
-    }
-
-    /* Formulario dinámico de paradas */
-    .dynamic-controls {
-      margin-top: 12px;
-      padding: 10px 12px 12px;
-      background: #f3f4f6;
-      border-radius: 12px;
-      border: 1px dashed #cbd5f5;
-    }
-
-    .dynamic-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #111827;
-    }
-
-    .dynamic-form {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: nowrap;
-    }
-
-    .dynamic-form label {
-      font-size: 11px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .dynamic-input {
-      flex: 1;
-      min-width: 0;
-      padding: 6px 8px;
-      border-radius: 999px;
-      border: 1px solid #cbd5e1;
-      font-size: 13px;
-      outline: none;
-    }
-
-    .dynamic-input:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
-    }
-
-    .dynamic-button {
-      border-radius: 999px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .dynamic-button:hover {
-      background: #1d4ed8;
-    }
-
-    .dynamic-button:active {
-      transform: translateY(1px);
-    }
-
-    .dynamic-help {
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    #dynamic-stops {
-      margin-top: 10px;
-    }
-
-    /* Sección de paradas cercanas */
-    .nearby-section {
-      margin-top: 14px;
-      padding: 10px 12px 12px;
-      background: #eef2ff;
-      border-radius: 12px;
-      border: 1px solid #c7d2fe;
-    }
-
-    .nearby-title {
-      font-size: 13px;
-      font-weight: 650;
-      color: #111827;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .nearby-badge {
-      font-size: 11px;
-      color: #4f46e5;
-      background: #e0e7ff;
-      padding: 2px 8px;
-      border-radius: 999px;
-    }
-
-    .nearby-status {
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .nearby-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .nearby-item {
-      background: #ffffff;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
-      padding: 8px 10px;
-      font-size: 12px;
-    }
-
-    .nearby-main {
-      font-size: 13px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 2px;
-    }
-
-    .nearby-sub {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    @media (max-width: 480px) {
-      body {
-        padding: 12px 8px;
-      }
-      .app-shell {
-        border-radius: 14px;
-      }
-      .line-badge {
-        min-width: 62px;
-        height: 30px;
-      }
-      .line-text {
-        font-size: 18px;
-        letter-spacing: 3px;
-      }
-      .bus-main {
-        font-size: 12px;
-      }
-      .dynamic-form {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .dynamic-button {
-        align-self: flex-end;
-      }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>🐶Turrobuses</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            --bg: #e5e7eb;
+            --card-bg: #ffffff;
+            --surface: #f9fafb;
+            --primary: #005bb7;
+            --primary-soft: rgba(0,91,183,0.06);
+            --urgent: #fee2e2;
+            --soon: #dcfce7;
+            --text: #111827;
+            --muted: #6b7280;
+            --border-subtle: #e5e7eb;
+            --shadow-soft: 0 18px 40px rgba(15,23,42,0.12);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-pill: 999px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px 12px;
+
+            /* Fondo azul oscuro con blur */
+            background: radial-gradient(circle at 30% 20%, rgba(29,78,216,0.45), transparent 60%),
+            radial-gradient(circle at 80% 80%, rgba(2,132,199,0.45), transparent 55%),
+            #0b1220;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+
+            color: var(--text);
+        }
+
+        .app-shell {
+            width: 100%;
+            max-width: 720px;
+            background: rgba(255,255,255,0.92);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 18px 40px rgba(15,23,42,0.32);
+            border: 1px solid rgba(148,163,184,0.35);
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Header superior */
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 10px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: linear-gradient(135deg, #ffffff, #eff6ff);
+        }
+
+        .title-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 650;
+            margin: 0;
+            letter-spacing: 0.01em;
+            color: #0f172a;
+        }
+
+        .refresh-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        /* Botón redondo de refrescar */
+        .refresh-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: #005bb7;
+            color: #ffffff;
+            padding: 0;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px 10px rgba(15,23,42,0.35);
+            transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .refresh-btn span.icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .refresh-btn:hover {
+            background: #0a6cff;
+            box-shadow: 0 6px 14px rgba(15,23,42,0.4);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 6px rgba(15,23,42,0.3);
+        }
+
+        .refresh-spin {
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .last-update-global {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        /* Legend */
+        .legend {
+            font-size: 11px;
+            color: var(--muted);
+            padding: 8px 20px 10px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            border: 1px solid rgba(148,163,184,0.6);
+        }
+
+        .legend-color.red {
+            background: #fecaca;
+        }
+
+        .legend-color.green {
+            background: #bbf7d0;
+        }
+
+        /* Accordion de paradas */
+        .accordion {
+            padding: 10px 14px 14px;
+            background: var(--surface);
+        }
+
+        .accordion-item {
+            background: #ffffff;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.12s ease-out;
+        }
+
+        .accordion-item.open {
+            border-color: rgba(37,99,235,0.85);
+            box-shadow: 0 10px 20px rgba(15,23,42,0.15);
+            transform: translateY(-1px);
+        }
+
+        .accordion-header {
+            width: 100%;
+            text-align: left;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            padding: 10px 12px 8px 12px;
+            font-size: 14px;
+            font-weight: 550;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accordion-header-main {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .stop-name {
+            font-size: 14px;
+        }
+
+        .stop-subtitle {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .accordion-header span.badge {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: var(--radius-pill);
+            border: 1px solid rgba(37,99,235,0.9);
+            color: #1d4ed8;
+            background: #dbeafe;
+            margin-left: auto;
+        }
+
+        .accordion-header::after {
+            content: "▾";
+            font-size: 13px;
+            margin-left: 8px;
+            color: var(--muted);
+            transition: transform 0.18s ease-out, color 0.18s ease-out;
+        }
+
+        .accordion-item.open .accordion-header::after {
+            transform: rotate(180deg);
+            color: var(--primary);
+        }
+
+        .accordion-panel {
+            display: none;
+            padding: 0 12px 10px;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .accordion-item.open .accordion-panel {
+            display: block;
+        }
+
+        .status {
+            font-size: 11px;
+            color: var(--muted);
+            margin: 6px 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        .status.error .status-dot {
+            background: #f97373;
+        }
+
+        .walk-time {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .reach-time {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .bus-list {
+            list-style: none;
+            padding: 0;
+            margin: 4px 0 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .bus-item {
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            font-size: 12px;
+            padding: 8px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bus-item.soon {
+            border-color: #86efac;
+            background: var(--soon);
+        }
+
+        .bus-item.urgent {
+            border-color: #fecaca;
+            background: var(--urgent);
+        }
+
+        .bus-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        /* Panel LED para la línea */
+        .line-badge {
+            position: relative;
+            min-width: 70px;
+            height: 32px;
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 0 6px;
+            background:
+                    radial-gradient(circle, rgba(148,163,184,0.75) 12%, transparent 14%) 0 0 / 9px 9px repeat,
+                    #020617;
+            box-shadow:
+                    inset 0 0 5px rgba(0,0,0,0.9),
+                    0 4px 8px rgba(15,23,42,0.35);
+            border: 1px solid rgba(15,23,42,0.95);
+            display: flex;
+            align-items: center;
+        }
+
+        .line-text {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            font-family: "Courier New", ui-monospace, monospace;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: #facc15;
+            text-shadow:
+                    0 0 3px rgba(251,191,36,0.9),
+                    0 0 6px rgba(251,146,60,0.9),
+                    0 0 10px rgba(248,113,113,0.7);
+            animation: led-scroll 4s linear infinite;
+        }
+
+        @keyframes led-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .bus-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .bus-main {
+            font-size: 13px;
+            font-weight: 550;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            color: #111827;
+        }
+
+        .bus-sub {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .bus-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .pill-minutes {
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 650;
+            letter-spacing: 0.02em;
+            border: 1px solid rgba(148,163,184,0.7);
+            background: #ffffff;
+            color: #111827;
+        }
+
+        .bus-item.urgent .pill-minutes {
+            border-color: #b91c1c;
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .bus-item.soon .pill-minutes {
+            border-color: #15803d;
+            background: #dcfce7;
+            color: #14532d;
+        }
+
+        .pill-label {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .empty {
+            font-size: 12px;
+            color: var(--muted);
+            font-style: italic;
+            padding: 4px 2px 6px;
+        }
+
+        /* Formulario dinámico de paradas */
+        .dynamic-controls {
+            margin-top: 12px;
+            padding: 10px 12px 12px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            border: 1px dashed #cbd5f5;
+        }
+
+        .dynamic-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #111827;
+        }
+
+        .dynamic-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .dynamic-form label {
+            font-size: 11px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .dynamic-input {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 8px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .dynamic-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
+        }
+
+        .dynamic-button {
+            border-radius: 999px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .dynamic-button:hover {
+            background: #1d4ed8;
+        }
+
+        .dynamic-button:active {
+            transform: translateY(1px);
+        }
+
+        .dynamic-help {
+            font-size: 10px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        #dynamic-stops {
+            margin-top: 10px;
+        }
+
+        /* Sección de paradas cercanas */
+        .nearby-section {
+            margin-top: 14px;
+            padding: 10px 12px 12px;
+            background: #eef2ff;
+            border-radius: 12px;
+            border: 1px solid #c7d2fe;
+        }
+
+        .nearby-title {
+            font-size: 13px;
+            font-weight: 650;
+            color: #111827;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nearby-badge {
+            font-size: 11px;
+            color: #4f46e5;
+            background: #e0e7ff;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .nearby-status {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .nearby-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nearby-item {
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .nearby-main {
+            font-size: 13px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 2px;
+        }
+
+        .nearby-sub {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 8px;
+            }
+            .app-shell {
+                border-radius: 14px;
+            }
+            .line-badge {
+                min-width: 62px;
+                height: 30px;
+            }
+            .line-text {
+                font-size: 18px;
+                letter-spacing: 3px;
+            }
+            .bus-main {
+                font-size: 12px;
+            }
+            .dynamic-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .dynamic-button {
+                align-self: flex-end;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="app-shell">
-  <header class="app-header">
-    <div class="title-block">
-      <div>
-        <h1>🐶Turrobuses</h1>
-      </div>
-    </div>
-    <div class="refresh-block">
-      <button class="refresh-btn" id="refresh-now">
-        <span class="icon">⟳</span>
-      </button>
-      <div class="last-update-global" id="last-update-global">
-        Última actualización: —
-      </div>
-    </div>
-  </header>
-
-  <section class="legend">
-    <div class="legend-item">
-      <div class="legend-color red"></div>
-      <span>&lt; 15 min · malamente</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color green"></div>
-      <span>20–15 min · vas bien</span>
-    </div>
-  </section>
-
-  <main class="accordion">
-    <!-- Parada fija 3224 -->
-    <article class="accordion-item open" data-stop-id="3224">
-      <button class="accordion-header">
-        <div class="accordion-header-main">
-          <div class="stop-name">Herrera Oria – Labastida (trabajo)</div>
-          <div class="stop-subtitle">Parada 3224 · Todas las líneas</div>
+    <header class="app-header">
+        <div class="title-block">
+            <div>
+                <title>🐶Turrobuses</title>
+            </div>
         </div>
-        <span class="badge">3224</span>
-      </button>
-      <div class="accordion-panel">
-        <div class="walk-time" id="walk-3224"></div>
-        <div class="reach-time" id="reach-3224"></div>
-        <div class="status" id="status-3224">
-          <span class="status-dot"></span>
-          <span>Cargando…</span>
+        <div class="refresh-block">
+            <button class="refresh-btn" id="refresh-now">
+                <span class="icon">⟳</span>
+            </button>
+            <div class="last-update-global" id="last-update-global">
+                Última actualización: —
+            </div>
         </div>
-        <ul class="bus-list" id="buses-3224"></ul>
-      </div>
-    </article>
+    </header>
 
-    <!-- Parada fija 2677 -->
-    <article class="accordion-item" data-stop-id="2677">
-      <button class="accordion-header">
-        <div class="accordion-header-main">
-          <div class="stop-name">Fuente de la Carra → centro</div>
-          <div class="stop-subtitle">Parada 2677 · Líneas 66 y 137</div>
+    <section class="legend">
+        <div class="legend-item">
+            <div class="legend-color red"></div>
+            <span>&lt; 15 min · malamente</span>
         </div>
-        <span class="badge">2677</span>
-      </button>
-      <div class="accordion-panel">
-        <div class="walk-time" id="walk-2677"></div>
-        <div class="reach-time" id="reach-2677"></div>
-        <div class="status" id="status-2677">
-          <span class="status-dot"></span>
-          <span>Cargando…</span>
+        <div class="legend-item">
+            <div class="legend-color green"></div>
+            <span>20–15 min · vas bien</span>
         </div>
-        <ul class="bus-list" id="buses-2677"></ul>
-      </div>
-    </article>
-
-    <!-- Formulario para añadir nuevas paradas -->
-    <section class="dynamic-controls">
-      <div class="dynamic-title">Añadir otra parada</div>
-      <form id="add-stop-form" class="dynamic-form">
-        <label for="stop-id-input">Parada</label>
-        <input
-                id="stop-id-input"
-                class="dynamic-input"
-                type="number"
-                inputmode="numeric"
-                placeholder="Ej: 1234"
-        />
-        <button type="submit" class="dynamic-button">Añadir</button>
-      </form>
-      <div class="dynamic-help">
-        Se creará un nuevo acordeón igual que los demás, con llegadas en tiempo real y tu tiempo andando/margen si es posible.
-      </div>
-      <div id="dynamic-stops"></div>
     </section>
 
-    <!-- Sección de paradas cercanas -->
-    <section class="nearby-section">
-      <div class="nearby-title">
-        Paradas cercanas
-        <span class="nearby-badge">Top 4</span>
-      </div>
-      <div class="nearby-status" id="nearby-status">
-        Usa el botón de refrescar para buscar paradas cerca de ti.
-      </div>
-      <ul class="nearby-list" id="nearby-list"></ul>
-    </section>
-  </main>
+    <main class="accordion">
+        <!-- Parada fija 3224 -->
+        <article class="accordion-item open" data-stop-id="3224">
+            <button class="accordion-header">
+                <div class="accordion-header-main">
+                    <div class="stop-name">Herrera Oria – Labastida (trabajo)</div>
+                    <div class="stop-subtitle">Parada 3224 · Todas las líneas</div>
+                </div>
+                <span class="badge">3224</span>
+            </button>
+            <div class="accordion-panel">
+                <div class="walk-time" id="walk-3224"></div>
+                <div class="reach-time" id="reach-3224"></div>
+                <div class="status" id="status-3224">
+                    <span class="status-dot"></span>
+                    <span>Cargando…</span>
+                </div>
+                <ul class="bus-list" id="buses-3224"></ul>
+            </div>
+        </article>
+
+        <!-- Parada fija 2677 -->
+        <article class="accordion-item" data-stop-id="2677">
+            <button class="accordion-header">
+                <div class="accordion-header-main">
+                    <div class="stop-name">Fuente de la Carra → centro</div>
+                    <div class="stop-subtitle">Parada 2677 · Líneas 66 y 137</div>
+                </div>
+                <span class="badge">2677</span>
+            </button>
+            <div class="accordion-panel">
+                <div class="walk-time" id="walk-2677"></div>
+                <div class="reach-time" id="reach-2677"></div>
+                <div class="status" id="status-2677">
+                    <span class="status-dot"></span>
+                    <span>Cargando…</span>
+                </div>
+                <ul class="bus-list" id="buses-2677"></ul>
+            </div>
+        </article>
+
+        <!-- Formulario para añadir nuevas paradas -->
+        <section class="dynamic-controls">
+            <div class="dynamic-title">Añadir otra parada</div>
+            <form id="add-stop-form" class="dynamic-form">
+                <label for="stop-id-input">Parada</label>
+                <input
+                        id="stop-id-input"
+                        class="dynamic-input"
+                        type="number"
+                        inputmode="numeric"
+                        placeholder="Ej: 1234"
+                />
+                <button type="submit" class="dynamic-button">Añadir</button>
+            </form>
+            <div class="dynamic-help">
+                Se creará un nuevo acordeón igual que los demás, con llegadas en tiempo real y tu tiempo andando/margen si es posible.
+            </div>
+            <div id="dynamic-stops"></div>
+        </section>
+
+        <!-- Sección de paradas cercanas -->
+        <section class="nearby-section">
+            <div class="nearby-title">
+                Paradas cercanas
+                <span class="nearby-badge">Top 4</span>
+            </div>
+            <div class="nearby-status" id="nearby-status">
+                Usa el botón de refrescar para buscar paradas cerca de ti.
+            </div>
+            <ul class="nearby-list" id="nearby-list"></ul>
+        </section>
+    </main>
 </div>
 
 <script>
-  const USER = "diegojesus.escudero@gmail.com";
-  const PASS = "Linares251291?";
-  const BASE_URL = "https://openapi.emtmadrid.es/v2";
+    const USER = "diegojesus.escudero@gmail.com";
+    const PASS = "Linares251291?";
+    const BASE_URL = "https://openapi.emtmadrid.es/v2";
 
-  // Coordenadas aproximadas de las paradas fijas (EJEMPLO: ajusta a las reales si quieres más precisión)
-  const STOP_COORDS = {
-    3224: { lat: 40.4800, lon: -3.7000 }, // TODO: sustituir por coords reales de 3224
-    2677: { lat: 40.5000, lon: -3.6900 }, // TODO: sustituir por coords reales de 2677
-  };
+    // Coordenadas aproximadas de las paradas fijas (EJEMPLO: ajusta a las reales si quieres más precisión)
+    const STOP_COORDS = {
+        3224: { lat: 40.4800, lon: -3.7000 }, // TODO: sustituir por coords reales de 3224
+        2677: { lat: 40.5000, lon: -3.6900 }, // TODO: sustituir por coords reales de 2677
+    };
 
-  // Ubicación del usuario
-  let userLocation = null;
-  const WALK_SPEED_KMH = 5; // km/h
+    // Ubicación del usuario
+    let userLocation = null;
+    const WALK_SPEED_KMH = 5; // km/h
 
-  // Paradas fijas + las que se vayan añadiendo
-  const STOPS = [
-    { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
-    { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
-  ];
+    // Paradas fijas + las que se vayan añadiendo
+    const STOPS = [
+        { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
+        { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
+    ];
 
-  // Fallback de tiempo andando manual (si no hay geoloc)
-  const WALK_TIMES = {
-    3224: 7,
-    2677: 6
-  };
+    // Fallback de tiempo andando manual (si no hay geoloc)
+    const WALK_TIMES = {
+        3224: 7,
+        2677: 6
+    };
 
-  let accessToken = null;
+    let accessToken = null;
 
-  const globalStatusEl = document.getElementById("last-update-global");
-  const refreshBtn = document.getElementById("refresh-now");
+    const globalStatusEl = document.getElementById("last-update-global");
+    const refreshBtn = document.getElementById("refresh-now");
 
-  const addStopForm = document.getElementById("add-stop-form");
-  const stopIdInput = document.getElementById("stop-id-input");
-  const dynamicStopsContainer = document.getElementById("dynamic-stops");
+    const addStopForm = document.getElementById("add-stop-form");
+    const stopIdInput = document.getElementById("stop-id-input");
+    const dynamicStopsContainer = document.getElementById("dynamic-stops");
 
-  const nearbyStatusEl = document.getElementById("nearby-status");
-  const nearbyListEl = document.getElementById("nearby-list");
+    const nearbyStatusEl = document.getElementById("nearby-status");
+    const nearbyListEl = document.getElementById("nearby-list");
 
-  // ---- GEOLOCALIZACIÓN ----
-  function initGeolocation() {
-    if (!("geolocation" in navigator)) {
-      console.warn("Geolocalización no disponible en este navegador.");
-      if (nearbyStatusEl) {
-        nearbyStatusEl.textContent = "Geolocalización no disponible en este dispositivo.";
-      }
-      return;
+    // --- GEOLOCALIZACIÓN: se llama en cada refreshAll ---
+    function updateUserLocation() {
+        return new Promise((resolve) => {
+            if (!("geolocation" in navigator)) {
+                console.warn("Geolocalización no disponible en este navegador.");
+                if (nearbyStatusEl && !userLocation) {
+                    nearbyStatusEl.textContent = "Geolocalización no disponible en este dispositivo.";
+                }
+                return resolve(false);
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLocation = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                    };
+                    console.log("Ubicación del usuario (refresco):", userLocation);
+                    resolve(true);
+                },
+                (err) => {
+                    console.warn("No se pudo obtener la ubicación:", err.message);
+                    if (nearbyStatusEl && !userLocation) {
+                        nearbyStatusEl.textContent = "No se ha podido obtener tu ubicación. Revisa permisos de geolocalización.";
+                    }
+                    resolve(false);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 30000,
+                }
+            );
+        });
     }
 
-    navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              userLocation = {
-                lat: pos.coords.latitude,
-                lon: pos.coords.longitude,
-              };
-              console.log("Ubicación del usuario:", userLocation);
-              refreshAll();
-            },
-            (err) => {
-              console.warn("No se pudo obtener la ubicación:", err.message);
-              if (nearbyStatusEl) {
-                nearbyStatusEl.textContent = "No se ha podido obtener tu ubicación. Revisa permisos de geolocalización.";
-              }
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 30000,
-            }
-    );
-  }
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
 
-  function getDistanceMeters(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const toRad = (deg) => (deg * Math.PI) / 180;
-
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(toRad(lat1)) *
             Math.cos(toRad(lat2)) *
             Math.sin(dLon / 2) *
             Math.sin(dLon / 2);
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  function getWalkingMinutes(stopId) {
-    if (userLocation && STOP_COORDS[stopId]) {
-      const stop = STOP_COORDS[stopId];
-      const dist = getDistanceMeters(
-              userLocation.lat,
-              userLocation.lon,
-              stop.lat,
-              stop.lon
-      );
-      const minutes = (dist / 1000 / WALK_SPEED_KMH) * 60;
-      return Math.round(minutes);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
-    const manual = WALK_TIMES[stopId];
-    if (manual != null) {
-      return manual;
+    function getWalkingMinutes(stopId) {
+        if (userLocation && STOP_COORDS[stopId]) {
+            const stop = STOP_COORDS[stopId];
+            const dist = getDistanceMeters(
+                userLocation.lat,
+                userLocation.lon,
+                stop.lat,
+                stop.lon
+            );
+            const minutes = (dist / 1000 / WALK_SPEED_KMH) * 60;
+            return Math.round(minutes);
+        }
+
+        const manual = WALK_TIMES[stopId];
+        if (manual != null) {
+            return manual;
+        }
+
+        return null;
     }
 
-    return null;
-  }
+    // ---- LOGIN EMT ----
+    async function login() {
+        const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
+            method: "GET",
+            headers: {
+                "email": USER,
+                "password": PASS
+            }
+        });
 
-  // ---- LOGIN EMT ----
-  async function login() {
-    const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
-      method: "GET",
-      headers: {
-        "email": USER,
-        "password": PASS
-      }
-    });
+        if (!res.ok) {
+            throw new Error("Error HTTP en login: " + res.status);
+        }
 
-    if (!res.ok) {
-      throw new Error("Error HTTP en login: " + res.status);
+        const json = await res.json();
+        console.log("LOGIN JSON", json);
+
+        if (json.code !== "00" && json.code !== "01") {
+            throw new Error("Login EMT falló: " + (json.description || json.code));
+        }
+
+        accessToken = json.data[0].accessToken;
+        return accessToken;
     }
 
-    const json = await res.json();
-    console.log("LOGIN JSON", json);
+    // ---- LLEGADAS PARADA ----
+    async function getArrivals(stopId) {
+        if (!accessToken) {
+            await login();
+        }
 
-    if (json.code !== "00" && json.code !== "01") {
-      throw new Error("Login EMT falló: " + (json.description || json.code));
-    }
-
-    accessToken = json.data[0].accessToken;
-    return accessToken;
-  }
-
-  // ---- LLEGADAS PARADA ----
-  async function getArrivals(stopId) {
-    if (!accessToken) {
-      await login();
-    }
-
-    const res = await fetch(
+        const res = await fetch(
             `${BASE_URL}/transport/busemtmad/stops/${stopId}/arrives/`,
             {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "accessToken": accessToken
-              },
-              body: JSON.stringify({
-                stopId: stopId,
-                Text_EstimationsRequired_YN: "Y",
-                Urban_UseYN: "Y"
-              })
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "accessToken": accessToken
+                },
+                body: JSON.stringify({
+                    stopId: stopId,
+                    Text_EstimationsRequired_YN: "Y",
+                    Urban_UseYN: "Y"
+                })
             }
-    );
+        );
 
-    if (!res.ok) {
-      throw new Error("Error HTTP en arrives (" + stopId + "): " + res.status);
-    }
+        if (!res.ok) {
+            throw new Error("Error HTTP en arrives (" + stopId + "): " + res.status);
+        }
 
-    const json = await res.json();
-    console.log("ARRIVES JSON stop", stopId, json);
+        const json = await res.json();
+        console.log("ARRIVES JSON stop", stopId, json);
 
-    if (json.code !== "00") {
-      if (json.code === "01" || json.code === "02") {
-        accessToken = null;
-        return getArrivals(stopId);
-      }
-      throw new Error("Error API arrives (" + stopId + "): " + (json.description || json.code));
-    }
+        if (json.code !== "00") {
+            if (json.code === "01" || json.code === "02") {
+                accessToken = null;
+                return getArrivals(stopId);
+            }
+            throw new Error("Error API arrives (" + stopId + "): " + (json.description || json.code));
+        }
 
-    const data = json.data && json.data[0] && json.data[0].Arrive
+        const data = json.data && json.data[0] && json.data[0].Arrive
             ? json.data[0].Arrive
             : [];
 
-    return data;
-  }
-
-  // ---- PARADAS CERCANAS (API) ----
-  async function getNearbyStops() {
-    if (!userLocation) {
-      throw new Error("No hay ubicación disponible.");
-    }
-    if (!accessToken) {
-      await login();
+        return data;
     }
 
-    const { lat, lon } = userLocation;
-    const radius = 400; // metros
+    // ---- PARADAS CERCANAS (API) ----
+    async function getNearbyStops() {
+        if (!userLocation) {
+            throw new Error("No hay ubicación disponible.");
+        }
+        if (!accessToken) {
+            await login();
+        }
 
-    const res = await fetch(
+        const { lat, lon } = userLocation;
+        const radius = 400; // metros
+
+        const res = await fetch(
             `${BASE_URL}/transport/busemtmad/stops/arroundxy/${lon}/${lat}/${radius}/`,
             {
-              method: "GET",
-              headers: {
-                "accessToken": accessToken
-              }
+                method: "GET",
+                headers: {
+                    "accessToken": accessToken
+                }
             }
-    );
+        );
 
-    if (!res.ok) {
-      throw new Error("Error HTTP en paradas cercanas: " + res.status);
-    }
-
-    const json = await res.json();
-    console.log("NEARBY JSON", json);
-
-    if (json.code !== "00") {
-      if (json.code === "01" || json.code === "02") {
-        accessToken = null;
-        return getNearbyStops();
-      }
-      throw new Error("Error API paradas cercanas: " + (json.description || json.code));
-    }
-
-    let stopsArr = [];
-
-    if (Array.isArray(json.data) && json.data.length > 0) {
-      const d0 = json.data[0];
-      if (Array.isArray(d0.stops)) stopsArr = d0.stops;
-      else if (Array.isArray(d0.Stops)) stopsArr = d0.Stops;
-      else if (Array.isArray(d0.Stop)) stopsArr = d0.Stop;
-      else if (Array.isArray(json.data)) stopsArr = json.data;
-    }
-
-    return stopsArr;
-  }
-
-  // ---- RENDER PARADA INDIVIDUAL ----
-  function renderStop(stopConfig, arrivals) {
-    const { id, filterLines } = stopConfig;
-    const listEl = document.getElementById(`buses-${id}`);
-    const statusWrapper = document.getElementById(`status-${id}`);
-    if (!listEl || !statusWrapper) return;
-
-    const statusText = statusWrapper.querySelector("span:nth-child(2)");
-
-    const walkEl = document.getElementById(`walk-${id}`);
-    const reachEl = document.getElementById(`reach-${id}`);
-
-    let walkingMinutes = null;
-    if (walkEl) {
-      walkingMinutes = getWalkingMinutes(id);
-      if (walkingMinutes != null) {
-        walkEl.textContent = `Tiempo andando aproximado hasta la parada: ${walkingMinutes} min`;
-      } else {
-        walkEl.textContent =
-                "Tiempo andando aproximado: no configurado o sin ubicación.";
-      }
-    }
-
-    listEl.innerHTML = "";
-
-    let filtered = arrivals;
-    if (filterLines && filterLines.length) {
-      filtered = arrivals.filter(a =>
-              filterLines.includes(String(a.line).trim())
-      );
-    }
-
-    // Próximo bus (minutos)
-    let nextBusMinutes = null;
-    filtered.forEach(arr => {
-      if (arr.estimateArrive != null) {
-        const m = Math.round(arr.estimateArrive / 60);
-        if (nextBusMinutes == null || m < nextBusMinutes) {
-          nextBusMinutes = m;
+        if (!res.ok) {
+            throw new Error("Error HTTP en paradas cercanas: " + res.status);
         }
-      }
-    });
 
-    if (reachEl) {
-      if (walkingMinutes != null && nextBusMinutes != null) {
-        const diff = nextBusMinutes - walkingMinutes;
-        if (diff >= 0) {
-          reachEl.textContent =
-                  `Si sales ahora, llegas con ~${diff} min de margen al próximo bus.`;
-        } else {
-          reachEl.textContent =
-                  `Si sales ahora, el próximo bus llega ~${Math.abs(diff)} min antes que tú.`;
+        const json = await res.json();
+        console.log("NEARBY JSON", json);
+
+        if (json.code !== "00") {
+            if (json.code === "01" || json.code === "02") {
+                accessToken = null;
+                return getNearbyStops();
+            }
+            throw new Error("Error API paradas cercanas: " + (json.description || json.code));
         }
-      } else if (nextBusMinutes != null) {
-        reachEl.textContent =
-                `Próximo bus en ~${nextBusMinutes} min. Sin estimar tu tiempo andando.`;
-      } else if (walkingMinutes != null) {
-        reachEl.textContent =
-                `Tiempo andando ~${walkingMinutes} min. Sin estimar llegada del próximo bus.`;
-      } else {
-        reachEl.textContent =
-                "Sin datos suficientes para calcular si llegas al próximo bus.";
-      }
+
+        let stopsArr = [];
+
+        if (Array.isArray(json.data) && json.data.length > 0) {
+            const d0 = json.data[0];
+            if (Array.isArray(d0.stops)) stopsArr = d0.stops;
+            else if (Array.isArray(d0.Stops)) stopsArr = d0.Stops;
+            else if (Array.isArray(d0.Stop)) stopsArr = d0.Stop;
+            else if (Array.isArray(json.data)) stopsArr = json.data;
+        }
+
+        return stopsArr;
     }
 
-    if (!filtered.length) {
-      const li = document.createElement("li");
-      li.className = "empty";
-      li.textContent = "No hay buses previstos ahora mismo.";
-      listEl.appendChild(li);
-      statusWrapper.classList.remove("error");
-      if (statusText) statusText.textContent = "Sin previsiones ahora mismo.";
-      return;
-    }
+    // ---- RENDER PARADA INDIVIDUAL ----
+    function renderStop(stopConfig, arrivals) {
+        const { id, filterLines } = stopConfig;
+        const listEl = document.getElementById(`buses-${id}`);
+        const statusWrapper = document.getElementById(`status-${id}`);
+        if (!listEl || !statusWrapper) return;
 
-    statusWrapper.classList.remove("error");
-    if (statusText) statusText.textContent = "Datos en tiempo real.";
+        const statusText = statusWrapper.querySelector("span:nth-child(2)");
 
-    filtered
+        const walkEl = document.getElementById(`walk-${id}`);
+        const reachEl = document.getElementById(`reach-${id}`);
+
+        let walkingMinutes = null;
+        if (walkEl) {
+            walkingMinutes = getWalkingMinutes(id);
+            if (walkingMinutes != null) {
+                walkEl.textContent = `Tiempo andando aproximado hasta la parada: ${walkingMinutes} min`;
+            } else {
+                walkEl.textContent =
+                    "Tiempo andando aproximado: no configurado o sin ubicación.";
+            }
+        }
+
+        listEl.innerHTML = "";
+
+        let filtered = arrivals;
+        if (filterLines && filterLines.length) {
+            filtered = arrivals.filter(a =>
+                filterLines.includes(String(a.line).trim())
+            );
+        }
+
+        // Próximo bus (minutos)
+        let nextBusMinutes = null;
+        filtered.forEach(arr => {
+            if (arr.estimateArrive != null) {
+                const m = Math.round(arr.estimateArrive / 60);
+                if (nextBusMinutes == null || m < nextBusMinutes) {
+                    nextBusMinutes = m;
+                }
+            }
+        });
+
+        if (reachEl) {
+            if (walkingMinutes != null && nextBusMinutes != null) {
+                const diff = nextBusMinutes - walkingMinutes;
+                if (diff >= 0) {
+                    reachEl.textContent =
+                        `Si sales ahora, llegas con ~${diff} min de margen al próximo bus.`;
+                } else {
+                    reachEl.textContent =
+                        `Si sales ahora, el próximo bus llega ~${Math.abs(diff)} min antes que tú.`;
+                }
+            } else if (nextBusMinutes != null) {
+                reachEl.textContent =
+                    `Próximo bus en ~${nextBusMinutes} min. Sin estimar tu tiempo andando.`;
+            } else if (walkingMinutes != null) {
+                reachEl.textContent =
+                    `Tiempo andando ~${walkingMinutes} min. Sin estimar llegada del próximo bus.`;
+            } else {
+                reachEl.textContent =
+                    "Sin datos suficientes para calcular si llegas al próximo bus.";
+            }
+        }
+
+        if (!filtered.length) {
+            const li = document.createElement("li");
+            li.className = "empty";
+            li.textContent = "No hay buses previstos ahora mismo.";
+            listEl.appendChild(li);
+            statusWrapper.classList.remove("error");
+            if (statusText) statusText.textContent = "Sin previsiones ahora mismo.";
+            return;
+        }
+
+        statusWrapper.classList.remove("error");
+        if (statusText) statusText.textContent = "Datos en tiempo real.";
+
+        filtered
             .sort((a, b) => (a.estimateArrive || 0) - (b.estimateArrive || 0))
             .forEach(arr => {
-              const li = document.createElement("li");
+                const li = document.createElement("li");
 
-              const minutes = arr.estimateArrive != null
-                      ? Math.round(arr.estimateArrive / 60)
-                      : null;
+                const minutes = arr.estimateArrive != null
+                    ? Math.round(arr.estimateArrive / 60)
+                    : null;
 
-              let className = "bus-item";
-              if (minutes != null) {
-                if (minutes < 15) {
-                  className += " urgent";
-                } else if (minutes < 20) {
-                  className += " soon";
+                let className = "bus-item";
+                if (minutes != null) {
+                    if (minutes < 15) {
+                        className += " urgent";
+                    } else if (minutes < 20) {
+                        className += " soon";
+                    }
                 }
-              }
-              li.className = className;
+                li.className = className;
 
-              const left = document.createElement("div");
-              left.className = "bus-left";
+                const left = document.createElement("div");
+                left.className = "bus-left";
 
-              const lineBadge = document.createElement("div");
-              lineBadge.className = "line-badge";
-              lineBadge.innerHTML = `<span class="line-text">${arr.line}</span>`;
+                const lineBadge = document.createElement("div");
+                lineBadge.className = "line-badge";
+                lineBadge.innerHTML = `<span class="line-text">${arr.line}</span>`;
 
-              const textBlock = document.createElement("div");
-              textBlock.className = "bus-text";
-              textBlock.innerHTML = `
+                const textBlock = document.createElement("div");
+                textBlock.className = "bus-text";
+                textBlock.innerHTML = `
             <div class="bus-main">${arr.destination || "Destino no disponible"}</div>
             <div class="bus-sub">
               Distancia aprox: ${arr.DistanceBus != null ? arr.DistanceBus + " m" : "-"}
             </div>
           `;
 
-              left.appendChild(lineBadge);
-              left.appendChild(textBlock);
+                left.appendChild(lineBadge);
+                left.appendChild(textBlock);
 
-              const right = document.createElement("div");
-              right.className = "bus-right";
+                const right = document.createElement("div");
+                right.className = "bus-right";
 
-              const pill = document.createElement("div");
-              pill.className = "pill-minutes";
+                const pill = document.createElement("div");
+                pill.className = "pill-minutes";
 
-              if (minutes === 0) {
-                pill.textContent = "Llegando";
-              } else if (minutes != null) {
-                pill.textContent = `${minutes} min`;
-              } else {
-                pill.textContent = "? min";
-              }
-
-              const label = document.createElement("div");
-              label.className = "pill-label";
-              if (minutes != null) {
-                if (minutes < 10) {
-                  label.textContent = "Muy justo";
-                } else if (minutes < 15) {
-                  label.textContent = "Justo";
-                } else if (minutes < 20) {
-                  label.textContent = "Tienes margen";
+                if (minutes === 0) {
+                    pill.textContent = "Llegando";
+                } else if (minutes != null) {
+                    pill.textContent = `${minutes} min`;
                 } else {
-                  label.textContent = "Tiempo de sobra";
+                    pill.textContent = "? min";
                 }
-              } else {
-                label.textContent = "Sin estimación precisa";
-              }
 
-              right.appendChild(pill);
-              right.appendChild(label);
+                const label = document.createElement("div");
+                label.className = "pill-label";
+                if (minutes != null) {
+                    if (minutes < 10) {
+                        label.textContent = "Muy justo";
+                    } else if (minutes < 15) {
+                        label.textContent = "Justo";
+                    } else if (minutes < 20) {
+                        label.textContent = "Tienes margen";
+                    } else {
+                        label.textContent = "Tiempo de sobra";
+                    }
+                } else {
+                    label.textContent = "Sin estimación precisa";
+                }
 
-              li.appendChild(left);
-              li.appendChild(right);
-              listEl.appendChild(li);
+                right.appendChild(pill);
+                right.appendChild(label);
+
+                li.appendChild(left);
+                li.appendChild(right);
+                listEl.appendChild(li);
             });
-  }
-
-  async function refreshStop(stopConfig) {
-    const statusWrapper = document.getElementById(`status-${stopConfig.id}`);
-    const statusText = statusWrapper?.querySelector("span:nth-child(2)");
-    if (statusWrapper && statusText) {
-      statusWrapper.classList.remove("error");
-      statusText.textContent = "Actualizando…";
     }
 
-    try {
-      const arrivals = await getArrivals(stopConfig.id);
-      renderStop(stopConfig, arrivals);
-    } catch (err) {
-      console.error(err);
-      if (statusWrapper && statusText) {
-        statusWrapper.classList.add("error");
-        statusText.textContent = "Error: " + err.message;
-      }
+    async function refreshStop(stopConfig) {
+        const statusWrapper = document.getElementById(`status-${stopConfig.id}`);
+        const statusText = statusWrapper?.querySelector("span:nth-child(2)");
+        if (statusWrapper && statusText) {
+            statusWrapper.classList.remove("error");
+            statusText.textContent = "Actualizando…";
+        }
+
+        try {
+            const arrivals = await getArrivals(stopConfig.id);
+            renderStop(stopConfig, arrivals);
+        } catch (err) {
+            console.error(err);
+            if (statusWrapper && statusText) {
+                statusWrapper.classList.add("error");
+                statusText.textContent = "Error: " + err.message;
+            }
+        }
     }
-  }
 
-  // ---- RENDER PARADAS CERCANAS ----
-  function renderNearbyStops(stops) {
-    if (!nearbyListEl) return;
-    nearbyListEl.innerHTML = "";
+    // ---- RENDER PARADAS CERCANAS ----
+    function renderNearbyStops(stops) {
+        if (!nearbyListEl) return;
+        nearbyListEl.innerHTML = "";
 
-    if (!stops || !stops.length) {
-      const li = document.createElement("li");
-      li.className = "nearby-item";
-      li.innerHTML = `
+        if (!stops || !stops.length) {
+            const li = document.createElement("li");
+            li.className = "nearby-item";
+            li.innerHTML = `
           <div class="nearby-main">Sin paradas cercanas en el radio seleccionado</div>
           <div class="nearby-sub">Prueba a moverte o ampliar el radio en el código si quieres.</div>
         `;
-      nearbyListEl.appendChild(li);
-      return;
-    }
-
-    const top4 = stops.slice(0, 4);
-
-    top4.forEach(stop => {
-      const li = document.createElement("li");
-      li.className = "nearby-item";
-
-      const stopId =
-              stop.stopId ??
-              stop.IdStop ??
-              stop.idStop ??
-              stop.id ??
-              stop.stopNum ??
-              "¿?";
-
-      const name =
-              stop.name ??
-              stop.stopName ??
-              stop.StopName ??
-              `Parada ${stopId}`;
-
-      let meters = null;
-      let distanceText = "";
-      let walkText = "";
-
-      if (userLocation) {
-        if (stop.geometry && Array.isArray(stop.geometry.coordinates)) {
-          const coords = stop.geometry.coordinates;
-          const lon = coords[0];
-          const lat = coords[1];
-          const dist = getDistanceMeters(
-                  userLocation.lat,
-                  userLocation.lon,
-                  lat,
-                  lon
-          );
-          meters = Math.round(dist);
-        } else {
-          const possible =
-                  stop.meters ??
-                  stop.distance ??
-                  stop.Distance ??
-                  stop.Dist ??
-                  null;
-          if (possible != null) {
-            meters = Math.round(possible);
-          }
+            nearbyListEl.appendChild(li);
+            return;
         }
 
-        if (meters != null) {
-          distanceText = `~${meters} m`;
-          const mins = Math.max(
-                  1,
-                  Math.round((meters / 1000 / WALK_SPEED_KMH) * 60)
-          );
-          walkText = `${mins} min andando aprox.`;
-        }
-      }
+        const top4 = stops.slice(0, 4);
 
-      li.innerHTML = `
+        top4.forEach(stop => {
+            const li = document.createElement("li");
+            li.className = "nearby-item";
+
+            const stopId =
+                stop.stopId ??
+                stop.IdStop ??
+                stop.idStop ??
+                stop.id ??
+                stop.stopNum ??
+                "¿?";
+
+            const name =
+                stop.name ??
+                stop.stopName ??
+                stop.StopName ??
+                `Parada ${stopId}`;
+
+            let meters = null;
+            let distanceText = "";
+            let walkText = "";
+
+            if (userLocation) {
+                if (stop.geometry && Array.isArray(stop.geometry.coordinates)) {
+                    const coords = stop.geometry.coordinates;
+                    const lon = coords[0];
+                    const lat = coords[1];
+                    const dist = getDistanceMeters(
+                        userLocation.lat,
+                        userLocation.lon,
+                        lat,
+                        lon
+                    );
+                    meters = Math.round(dist);
+                } else {
+                    const possible =
+                        stop.meters ??
+                        stop.distance ??
+                        stop.Distance ??
+                        stop.Dist ??
+                        null;
+                    if (possible != null) {
+                        meters = Math.round(possible);
+                    }
+                }
+
+                if (meters != null) {
+                    distanceText = `~${meters} m`;
+                    const mins = Math.max(
+                        1,
+                        Math.round((meters / 1000 / WALK_SPEED_KMH) * 60)
+                    );
+                    walkText = `${mins} min andando aprox.`;
+                }
+            }
+
+            li.innerHTML = `
           <div class="nearby-main">${name}</div>
           <div class="nearby-sub">
             Parada ${stopId}
@@ -1191,93 +1188,101 @@
           </div>
         `;
 
-      nearbyListEl.appendChild(li);
-    });
-  }
-
-  async function refreshNearbyStops() {
-    if (!nearbyStatusEl || !nearbyListEl) return;
-
-    if (!userLocation) {
-      nearbyStatusEl.textContent =
-              "Activa la geolocalización del navegador para ver paradas cercanas.";
-      nearbyListEl.innerHTML = "";
-      return;
+            nearbyListEl.appendChild(li);
+        });
     }
 
-    nearbyStatusEl.textContent = "Buscando paradas cercanas…";
+    async function refreshNearbyStops() {
+        if (!nearbyStatusEl || !nearbyListEl) return;
 
-    try {
-      const stops = await getNearbyStops();
-      renderNearbyStops(stops);
-      nearbyStatusEl.textContent = `Mostrando las ${Math.min(
-              4,
-              stops.length
-      )} paradas más cercanas.`;
-    } catch (err) {
-      console.error(err);
-      nearbyStatusEl.textContent =
-              "No se han podido cargar las paradas cercanas.";
-      nearbyListEl.innerHTML = "";
-    }
-  }
+        if (!userLocation) {
+            nearbyStatusEl.textContent =
+                "Activa la geolocalización del navegador para ver paradas cercanas.";
+            nearbyListEl.innerHTML = "";
+            return;
+        }
 
-  // ---- REFRESH GLOBAL ----
-  async function refreshAll() {
-    if (globalStatusEl) {
-      globalStatusEl.textContent = "Actualizando todas las paradas…";
-    }
-    await Promise.all(STOPS.map(stop => refreshStop(stop)));
-    await refreshNearbyStops();
-    if (globalStatusEl) {
-      globalStatusEl.textContent =
-              "Última actualización: " + new Date().toLocaleTimeString("es-ES");
-    }
-  }
+        nearbyStatusEl.textContent = "Buscando paradas cercanas…";
 
-  // ---- ACCORDIÓN ----
-  function setupAccordion() {
-    const items = document.querySelectorAll(".accordion-item");
-    items.forEach(item => {
-      const header = item.querySelector(".accordion-header");
-      if (!header) return;
-      header.addEventListener("click", () => {
-        item.classList.toggle("open");
-      });
-    });
-  }
-
-  // ---- PARADAS DINÁMICAS ----
-  async function createDynamicStopAccordion(stopId) {
-    if (STOPS.some(s => s.id === stopId)) {
-      const existing = document.querySelector(
-              `.accordion-item[data-stop-id="${stopId}"]`
-      );
-      if (existing) {
-        existing.classList.add("open");
-      }
-      await refreshStop({ id: stopId });
-      return;
+        try {
+            const stops = await getNearbyStops();
+            renderNearbyStops(stops);
+            nearbyStatusEl.textContent = `Mostrando las ${Math.min(
+                4,
+                stops.length
+            )} paradas más cercanas.`;
+        } catch (err) {
+            console.error(err);
+            nearbyStatusEl.textContent =
+                "No se han podido cargar las paradas cercanas.";
+            nearbyListEl.innerHTML = "";
+        }
     }
 
-    let arrivals;
-    try {
-      arrivals = await getArrivals(stopId);
-    } catch (err) {
-      console.error(err);
-      alert(
-              `No se ha podido obtener información para la parada ${stopId}. Comprueba que el número es correcto.`
-      );
-      return;
+    // ---- REFRESH GLOBAL ----
+    async function refreshAll() {
+        if (globalStatusEl) {
+            globalStatusEl.textContent = "Actualizando todas las paradas…";
+        }
+
+        // 1) Actualizar ubicación actual antes de recalcular tiempos
+        await updateUserLocation();
+
+        // 2) Refrescar paradas configuradas
+        await Promise.all(STOPS.map(stop => refreshStop(stop)));
+
+        // 3) Refrescar paradas cercanas en base a la ubicación recién actualizada
+        await refreshNearbyStops();
+
+        if (globalStatusEl) {
+            globalStatusEl.textContent =
+                "Última actualización: " + new Date().toLocaleTimeString("es-ES");
+        }
     }
 
-    const stopConfig = { id: stopId, label: `Parada ${stopId}` };
-    STOPS.push(stopConfig);
+    // ---- ACCORDIÓN ----
+    function setupAccordion() {
+        const items = document.querySelectorAll(".accordion-item");
+        items.forEach(item => {
+            const header = item.querySelector(".accordion-header");
+            if (!header) return;
+            header.addEventListener("click", () => {
+                item.classList.toggle("open");
+            });
+        });
+    }
 
-    const article = document.createElement("article");
-    article.className = "accordion-item open";
-    article.dataset.stopId = String(stopId);
-    article.innerHTML = `
+    // ---- PARADAS DINÁMICAS ----
+    async function createDynamicStopAccordion(stopId) {
+        if (STOPS.some(s => s.id === stopId)) {
+            const existing = document.querySelector(
+                `.accordion-item[data-stop-id="${stopId}"]`
+            );
+            if (existing) {
+                existing.classList.add("open");
+            }
+            await refreshStop({ id: stopId });
+            return;
+        }
+
+        let arrivals;
+        try {
+            arrivals = await getArrivals(stopId);
+        } catch (err) {
+            console.error(err);
+            alert(
+                `No se ha podido obtener información para la parada ${stopId}. Comprueba que el número es correcto.`
+            );
+            return;
+        }
+
+        const stopConfig = { id: stopId, label: `Parada ${stopId}` };
+        STOPS.push(stopConfig);
+
+        const article = document.createElement("article");
+        article.className = "accordion-item open";
+        article.dataset.stopId = String(stopId);
+        article.innerHTML = `
         <button class="accordion-header">
           <div class="accordion-header-main">
             <div class="stop-name">Parada ${stopId}</div>
@@ -1296,49 +1301,48 @@
         </div>
       `;
 
-    dynamicStopsContainer.appendChild(article);
+        dynamicStopsContainer.appendChild(article);
 
-    const header = article.querySelector(".accordion-header");
-    header.addEventListener("click", () => {
-      article.classList.toggle("open");
-    });
+        const header = article.querySelector(".accordion-header");
+        header.addEventListener("click", () => {
+            article.classList.toggle("open");
+        });
 
-    renderStop(stopConfig, arrivals);
-  }
+        renderStop(stopConfig, arrivals);
+    }
 
-  if (addStopForm && stopIdInput) {
-    addStopForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const raw = stopIdInput.value.trim();
+    if (addStopForm && stopIdInput) {
+        addStopForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const raw = stopIdInput.value.trim();
 
-      if (!raw) return;
-      const stopId = parseInt(raw, 10);
-      if (Number.isNaN(stopId) || stopId <= 0) {
-        alert("Introduce un número de parada válido.");
-        return;
-      }
+            if (!raw) return;
+            const stopId = parseInt(raw, 10);
+            if (Number.isNaN(stopId) || stopId <= 0) {
+                alert("Introduce un número de parada válido.");
+                return;
+            }
 
-      await createDynamicStopAccordion(stopId);
-      stopIdInput.value = "";
-    });
-  }
+            await createDynamicStopAccordion(stopId);
+            stopIdInput.value = "";
+        });
+    }
 
-  // ---- INIT ----
-  setupAccordion();
-  initGeolocation();
-  refreshAll();
-  setInterval(refreshAll, 15000);
+    // ---- INIT ----
+    setupAccordion();
+    refreshAll();
+    setInterval(refreshAll, 15000);
 
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", async () => {
-      refreshBtn.classList.add("refresh-spin");
-      try {
-        await refreshAll();
-      } finally {
-        setTimeout(() => refreshBtn.classList.remove("refresh-spin"), 600);
-      }
-    });
-  }
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", async () => {
+            refreshBtn.classList.add("refresh-spin");
+            try {
+                await refreshAll();
+            } finally {
+                setTimeout(() => refreshBtn.classList.remove("refresh-spin"), 600);
+            }
+        });
+    }
 </script>
 </body>
 </html>
