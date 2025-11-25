@@ -301,6 +301,12 @@
       margin-top: 6px;
     }
 
+    .reach-time {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
     .bus-list {
       list-style: none;
       padding: 0;
@@ -482,11 +488,6 @@
       outline: none;
     }
 
-    .dynamic-input-short {
-      max-width: 80px;
-      text-align: center;
-    }
-
     .dynamic-input:focus {
       border-color: #2563eb;
       box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
@@ -593,6 +594,7 @@
       </button>
       <div class="accordion-panel">
         <div class="walk-time" id="walk-3224"></div>
+        <div class="reach-time" id="reach-3224"></div>
         <div class="status" id="status-3224">
           <span class="status-dot"></span>
           <span>Cargando…</span>
@@ -612,6 +614,7 @@
       </button>
       <div class="accordion-panel">
         <div class="walk-time" id="walk-2677"></div>
+        <div class="reach-time" id="reach-2677"></div>
         <div class="status" id="status-2677">
           <span class="status-dot"></span>
           <span>Cargando…</span>
@@ -632,19 +635,10 @@
                 inputmode="numeric"
                 placeholder="Ej: 1234"
         />
-        <label for="walk-min-input">Min</label>
-        <input
-                id="walk-min-input"
-                class="dynamic-input dynamic-input-short"
-                type="number"
-                inputmode="numeric"
-                min="0"
-                placeholder="Ej: 7"
-        />
         <button type="submit" class="dynamic-button">Añadir</button>
       </form>
       <div class="dynamic-help">
-        Se creará un nuevo acordeón igual que los demás, con llegadas en tiempo real y tu tiempo andando.
+        Se creará un nuevo acordeón igual que los demás, con llegadas en tiempo real y tu tiempo andando/margen si es posible.
       </div>
       <div id="dynamic-stops"></div>
     </section>
@@ -679,7 +673,7 @@
   const WALK_TIMES = {
     3224: 7,
     2677: 6
-    // Las nuevas paradas se añadirán dinámicamente aquí si el usuario pone minutos
+    // Las nuevas paradas ya no se configuran a mano, se intenta usar geolocalización
   };
 
   let accessToken = null;
@@ -688,7 +682,6 @@
 
   const addStopForm = document.getElementById("add-stop-form");
   const stopIdInput = document.getElementById("stop-id-input");
-  const walkMinInput = document.getElementById("walk-min-input");
   const dynamicStopsContainer = document.getElementById("dynamic-stops");
 
   // Pedir geolocalización al usuario
@@ -839,10 +832,13 @@
 
     // Tiempo andando (dinámico si se puede)
     const walkEl = document.getElementById(`walk-${id}`);
+    const reachEl = document.getElementById(`reach-${id}`);
+
+    let walkingMinutes = null;
     if (walkEl) {
-      const walk = getWalkingMinutes(id);
-      if (walk != null) {
-        walkEl.textContent = `Tiempo andando aproximado hasta la parada: ${walk} min`;
+      walkingMinutes = getWalkingMinutes(id);
+      if (walkingMinutes != null) {
+        walkEl.textContent = `Tiempo andando aproximado hasta la parada: ${walkingMinutes} min`;
       } else {
         walkEl.textContent =
                 "Tiempo andando aproximado: no configurado o sin ubicación.";
@@ -856,6 +852,40 @@
       filtered = arrivals.filter(a =>
               filterLines.includes(String(a.line).trim())
       );
+    }
+
+    // Buscar minutos del próximo bus (el más cercano)
+    let nextBusMinutes = null;
+    filtered.forEach(arr => {
+      if (arr.estimateArrive != null) {
+        const m = Math.round(arr.estimateArrive / 60);
+        if (nextBusMinutes == null || m < nextBusMinutes) {
+          nextBusMinutes = m;
+        }
+      }
+    });
+
+    // Mensaje de margen: tiempo que queda para llegar al próximo bus
+    if (reachEl) {
+      if (walkingMinutes != null && nextBusMinutes != null) {
+        const diff = nextBusMinutes - walkingMinutes;
+        if (diff >= 0) {
+          reachEl.textContent =
+                  `Si sales ahora, llegas con ~${diff} min de margen al próximo bus.`;
+        } else {
+          reachEl.textContent =
+                  `Si sales ahora, el próximo bus llega ~${Math.abs(diff)} min antes que tú.`;
+        }
+      } else if (nextBusMinutes != null) {
+        reachEl.textContent =
+                `Próximo bus en ~${nextBusMinutes} min. Sin estimar tu tiempo andando.`;
+      } else if (walkingMinutes != null) {
+        reachEl.textContent =
+                `Tiempo andando ~${walkingMinutes} min. Sin estimar llegada del próximo bus.`;
+      } else {
+        reachEl.textContent =
+                "Sin datos suficientes para calcular si llegas al próximo bus.";
+      }
     }
 
     if (!filtered.length) {
@@ -990,26 +1020,29 @@
     });
   }
 
-  // Crear dinámicamente un acordeón nuevo para una parada
-  function createDynamicStopAccordion(stopId, walkMinutes) {
-    // Si ya existe en STOPS, solo la abrimos y actualizamos tiempo andando manual si viene
+  // Crear dinámicamente un acordeón nuevo para una parada (con validación)
+  async function createDynamicStopAccordion(stopId) {
+    // Si ya existe en STOPS, solo la abrimos y refrescamos
     if (STOPS.some(s => s.id === stopId)) {
-      if (walkMinutes != null) {
-        WALK_TIMES[stopId] = walkMinutes;
-      }
       const existing = document.querySelector(`.accordion-item[data-stop-id="${stopId}"]`);
       if (existing) {
         existing.classList.add("open");
       }
-      refreshStop({ id: stopId });
+      await refreshStop({ id: stopId });
       return;
     }
 
-    // Guardar el tiempo andando manual si se ha indicado
-    if (walkMinutes != null) {
-      WALK_TIMES[stopId] = walkMinutes;
+    // Validar contra la API: si falla, mostramos error y no añadimos
+    let arrivals;
+    try {
+      arrivals = await getArrivals(stopId);
+    } catch (err) {
+      console.error(err);
+      alert(`No se ha podido obtener información para la parada ${stopId}. Comprueba que el número es correcto.`);
+      return;
     }
 
+    // Si la llamada es correcta, añadimos la parada (aunque no haya buses ahora mismo)
     const stopConfig = { id: stopId, label: `Parada ${stopId}` };
     STOPS.push(stopConfig);
 
@@ -1026,9 +1059,10 @@
         </button>
         <div class="accordion-panel">
           <div class="walk-time" id="walk-${stopId}"></div>
+          <div class="reach-time" id="reach-${stopId}"></div>
           <div class="status" id="status-${stopId}">
             <span class="status-dot"></span>
-            <span>Cargando…</span>
+            <span>Datos cargados.</span>
           </div>
           <ul class="bus-list" id="buses-${stopId}"></ul>
         </div>
@@ -1041,15 +1075,15 @@
       article.classList.toggle("open");
     });
 
-    refreshStop(stopConfig);
+    // Pintamos usando los arrivals que ya tenemos
+    renderStop(stopConfig, arrivals);
   }
 
   // Formulario: añadir parada nueva
   if (addStopForm && stopIdInput) {
-    addStopForm.addEventListener("submit", (e) => {
+    addStopForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const raw = stopIdInput.value.trim();
-      const walkRaw = walkMinInput.value.trim();
 
       if (!raw) return;
       const stopId = parseInt(raw, 10);
@@ -1058,17 +1092,8 @@
         return;
       }
 
-      let walkMinutes = null;
-      if (walkRaw) {
-        const w = parseInt(walkRaw, 10);
-        if (!Number.isNaN(w) && w >= 0) {
-          walkMinutes = w;
-        }
-      }
-
-      createDynamicStopAccordion(stopId, walkMinutes);
+      await createDynamicStopAccordion(stopId);
       stopIdInput.value = "";
-      walkMinInput.value = "";
     });
   }
 
