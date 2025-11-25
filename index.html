@@ -3,376 +3,768 @@
 <head>
   <meta charset="UTF-8" />
   <title>Próximos buses EMT</title>
-  <!-- Importante para que el móvil escale bien la página -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --bg: #e5e7eb;
+      --card-bg: #ffffff;
+      --surface: #f9fafb;
+      --primary: #005bb7;
+      --primary-soft: rgba(0,91,183,0.06);
+      --urgent: #fee2e2;
+      --soon: #dcfce7;
+      --text: #111827;
+      --muted: #6b7280;
+      --border-subtle: #e5e7eb;
+      --shadow-soft: 0 18px 40px rgba(15,23,42,0.12);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-pill: 999px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      padding: 1.5rem;
-      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px;
+
+      /* Fondo azul oscuro con degradado + blur */
+      background: radial-gradient(circle at 30% 20%, rgba(29,78,216,0.45), transparent 60%),
+      radial-gradient(circle at 80% 80%, rgba(2,132,199,0.45), transparent 55%),
+      #0b1220;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+
+      color: var(--text);
     }
+
+    /* Caja central (se mantiene igual pero ahora queda sobre el fondo blur) */
+    .app-shell {
+      width: 100%;
+      max-width: 720px;
+      background: rgba(255,255,255,0.92); /* semitransparente pero casi blanco */
+      border-radius: var(--radius-lg);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.32);
+      border: 1px solid rgba(148,163,184,0.35);
+      overflow: hidden;
+
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+
+    /* Header superior */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(135deg, #ffffff, #eff6ff);
+    }
+
+    .title-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: radial-gradient(circle at 30% 20%, #60a5fa, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 18px;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.45);
+    }
+
     h1 {
-      margin-top: 0;
-      margin-bottom: 0.5rem;
+      font-size: 20px;
+      font-weight: 650;
+      margin: 0;
+      letter-spacing: 0.01em;
+      color: #0f172a;
     }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .refresh-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .refresh-btn {
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(37,99,235,0.7);
+      background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(59,130,246,0.12));
+      color: #1d4ed8;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.16s ease-out;
+    }
+
+    .refresh-btn span.icon {
+      font-size: 13px;
+    }
+
+    .refresh-btn:hover {
+      background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(59,130,246,0.18));
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.3);
+    }
+
+    .refresh-btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .last-update-global {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* Legend */
     .legend {
-      font-size: 0.85rem;
-      color: #444;
-      margin-bottom: 1rem;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 8px 20px 10px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      background: #f9fafb;
+      border-bottom: 1px solid var(--border-subtle);
     }
+
     .legend-item {
       display: inline-flex;
       align-items: center;
-      margin-right: 1rem;
+      gap: 6px;
     }
+
     .legend-color {
       width: 14px;
       height: 14px;
-      border-radius: 3px;
-      margin-right: 0.3rem;
-      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 4px;
+      border: 1px solid rgba(148,163,184,0.6);
     }
 
+    .legend-color.red {
+      background: #fecaca;
+    }
+
+    .legend-color.green {
+      background: #bbf7d0;
+    }
+
+    /* Accordion de paradas */
     .accordion {
-      max-width: 600px;
-      margin: 0 auto;
+      padding: 10px 14px 14px;
+      background: var(--surface);
     }
+
     .accordion-item {
-      background: #fff;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      margin-bottom: 0.75rem;
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 10px;
       overflow: hidden;
+      transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.12s ease-out;
     }
+
+    .accordion-item.open {
+      border-color: rgba(37,99,235,0.85);
+      box-shadow: 0 10px 20px rgba(15,23,42,0.15);
+      transform: translateY(-1px);
+    }
+
     .accordion-header {
       width: 100%;
       text-align: left;
       border: none;
-      background: #005bb7;
-      color: #fff;
-      padding: 0.8rem 1rem;
-      font-size: 1rem;
-      font-weight: 600;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 12px 8px 12px;
+      font-size: 14px;
+      font-weight: 550;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: center; /* esto ya centra el badge verticalmente */
     }
-    .accordion-header span {
-      font-size: 0.85rem;
-      font-weight: 400;
-      opacity: 0.85;
+
+    .accordion-header-main {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
     }
+
+    .stop-name {
+      font-size: 14px;
+    }
+
+    .stop-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .accordion-header span.badge {
+      font-size: 14px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(37,99,235,0.9);
+      color: #1d4ed8;
+      background: #dbeafe;
+      margin-left: auto;
+    }
+
     .accordion-header::after {
       content: "▾";
-      font-size: 0.9rem;
-      transition: transform 0.2s;
+      font-size: 13px;
+      margin-left: 8px;
+      color: var(--muted);
+      transition: transform 0.18s ease-out, color 0.18s ease-out;
     }
+
     .accordion-item.open .accordion-header::after {
       transform: rotate(180deg);
+      color: var(--primary);
     }
+
     .accordion-panel {
       display: none;
-      padding: 0.8rem 1rem 1rem;
-      background: #fff;
+      padding: 0 12px 10px;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
     }
+
     .accordion-item.open .accordion-panel {
       display: block;
     }
 
     .status {
-      font-size: 0.85rem;
-      color: #555;
-      margin-bottom: 0.5rem;
+      font-size: 11px;
+      color: var(--muted);
+      margin: 6px 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .status.error .status-dot {
+      background: #f97373;
+    }
+
     .bus-list {
       list-style: none;
       padding: 0;
-      margin: 0;
+      margin: 4px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    /* Cada bus es una tarjeta con info + mapa */
     .bus-item {
-      background: #f9f9f9;
-      margin-bottom: 0.4rem;
-      border-radius: 0.4rem;
-      font-size: 0.9rem;
-      overflow: hidden;
-    }
-    .bus-item.soon {
-      background: #e6f7e6;  /* verde clarito */
-    }
-    .bus-item.urgent {
-      background: #fde6e6;  /* rojo clarito */
-    }
-
-    .bus-header {
-      width: 100%;
-      border: none;
-      background: transparent;
-      padding: 0.5rem 0.75rem 0.3rem;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      font-size: 12px;
+      padding: 8px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      cursor: default;
+      gap: 8px;
     }
-    .bus-header-left {
+
+    .bus-item.soon {
+      border-color: #86efac;
+      background: var(--soon);
+    }
+
+    .bus-item.urgent {
+      border-color: #fecaca;
+      background: var(--urgent);
+    }
+
+    .bus-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    /* PANEL LED para la línea */
+    .line-badge {
+      position: relative;
+      min-width: 70px;
+      height: 32px;
+      border-radius: 6px;
+      overflow: hidden;
+      padding: 0 6px;
+      background:
+              radial-gradient(circle, rgba(148,163,184,0.75) 12%, transparent 14%) 0 0 / 9px 9px repeat,
+              #020617;
+      box-shadow:
+              inset 0 0 5px rgba(0,0,0,0.9),
+              0 4px 8px rgba(15,23,42,0.35);
+      border: 1px solid rgba(15,23,42,0.95);
+      display: flex;
+      align-items: center;
+    }
+
+    .line-text {
+      display: inline-block;
+      white-space: nowrap;
+      padding-left: 100%; /* para que entre desde la derecha */
+      font-family: "Courier New", ui-monospace, monospace;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #facc15; /* amarillo */
+      text-shadow:
+              0 0 3px rgba(251,191,36,0.9),
+              0 0 6px rgba(251,146,60,0.9),
+              0 0 10px rgba(248,113,113,0.7);
+      animation: led-scroll 4s linear infinite;
+    }
+
+    @keyframes led-scroll {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    .bus-text {
       display: flex;
       flex-direction: column;
-      gap: 0.1rem;
-      text-align: left;
+      gap: 2px;
+      min-width: 0;
     }
+
     .bus-main {
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 550;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      color: #111827;
     }
+
     .bus-sub {
-      font-size: 0.8rem;
-      color: #666;
+      font-size: 11px;
+      color: var(--muted);
     }
-    .bus-header-right {
-      font-weight: 600;
+
+    .bus-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
     }
-    .bus-header::after {
-      content: "";
+
+    .pill-minutes {
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: #ffffff;
+      color: #111827;
     }
+
+    .bus-item.urgent .pill-minutes {
+      border-color: #b91c1c;
+      background: #fee2e2;
+      color: #7f1d1d;
+    }
+
+    .bus-item.soon .pill-minutes {
+      border-color: #15803d;
+      background: #dcfce7;
+      color: #14532d;
+    }
+
+    .pill-label {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
     .empty {
-      font-size: 0.9rem;
-      color: #666;
+      font-size: 12px;
+      color: var(--muted);
       font-style: italic;
+      padding: 4px 2px 6px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 12px 8px;
+      }
+      .app-shell {
+        border-radius: 14px;
+      }
+      .line-badge {
+        min-width: 62px;
+        height: 30px;
+      }
+      .line-text {
+        font-size: 18px;
+        letter-spacing: 3px;
+      }
+      .bus-main {
+        font-size: 12px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Próximos buses EMT</h1>
-  <div class="legend">
-    <div class="legend-item">
-      <div class="legend-color" style="background:#fde6e6;"></div>
-      <span>&lt; 15 min (justo)</span>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="title-block">
+      <div class="title-icon">E</div>
+      <div>
+        <h1>Próximos buses EMT</h1>
+        <div class="subtitle">Paradas favoritas en tiempo real</div>
+      </div>
     </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background:#e6f7e6;"></div>
-      <span>20–15 min (bien)</span>
+    <div class="refresh-block">
+      <button class="refresh-btn" id="refresh-now">
+        <span class="icon">⟳</span>
+        <span>Actualizar ahora</span>
+      </button>
+      <div class="last-update-global" id="last-update-global">
+        Última actualización: —
+      </div>
     </div>
-  </div>
+  </header>
 
-  <div class="accordion">
+  <section class="legend">
+    <div class="legend-item">
+      <div class="legend-color red"></div>
+      <span>&lt; 15 min · malamente</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color green"></div>
+      <span>20–15 min · vas bien</span>
+    </div>
+  </section>
+
+  <main class="accordion">
     <!-- Parada 3224 -->
-    <div class="accordion-item open">
+    <article class="accordion-item open">
       <button class="accordion-header">
-        Herrera Oria - Labastida (TRABAJO) - Parada 3224
-        <span>todas las líneas</span>
+        <div class="accordion-header-main">
+          <div class="stop-name">Herrera Oria – Labastida (trabajo)</div>
+          <div class="stop-subtitle">Parada 3224 · Todas las líneas</div>
+        </div>
+        <span class="badge">3224</span>
       </button>
       <div class="accordion-panel">
-        <div class="status" id="status-3224">Cargando...</div>
+        <div class="status" id="status-3224">
+          <span class="status-dot"></span>
+          <span>Cargando…</span>
+        </div>
         <ul class="bus-list" id="buses-3224"></ul>
       </div>
-    </div>
+    </article>
 
     <!-- Parada 2677 (solo 66 y 137) -->
-    <div class="accordion-item">
+    <article class="accordion-item">
       <button class="accordion-header">
-        Fuente de la Carra hacia el centro - Parada 2677
-        <span>líneas 66 y 137</span>
+        <div class="accordion-header-main">
+          <div class="stop-name">Fuente de la Carra → centro</div>
+          <div class="stop-subtitle">Parada 2677 · Líneas 66 y 137</div>
+        </div>
+        <span class="badge">2677</span>
       </button>
       <div class="accordion-panel">
-        <div class="status" id="status-2677">Cargando...</div>
+        <div class="status" id="status-2677">
+          <span class="status-dot"></span>
+          <span>Cargando…</span>
+        </div>
         <ul class="bus-list" id="buses-2677"></ul>
       </div>
-    </div>
-  </div>
+    </article>
+  </main>
+</div>
 
-  <script>
-    const USER = "diegojesus.escudero@gmail.com";
-    const PASS = "Linares251291?";
+<script>
+  const USER = "diegojesus.escudero@gmail.com";
+  const PASS = "Linares251291?";
 
-    const BASE_URL = "https://openapi.emtmadrid.es/v2";
+  const BASE_URL = "https://openapi.emtmadrid.es/v2";
 
-    // Config de paradas
-    const STOPS = [
-      { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
-      { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
-    ];
+  const STOPS = [
+    { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
+    { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
+  ];
 
-    let accessToken = null;
+  let accessToken = null;
+  const globalStatusEl = document.getElementById("last-update-global");
+  const refreshBtn = document.getElementById("refresh-now");
 
-    // Login a EMT (aceptamos code "00" y "01")
-    async function login() {
-      const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
-        method: "GET",
-        headers: {
-          "email": USER,
-          "password": PASS
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error("Error HTTP en login: " + res.status);
+  async function login() {
+    const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
+      method: "GET",
+      headers: {
+        "email": USER,
+        "password": PASS
       }
+    });
 
-      const json = await res.json();
-      console.log("LOGIN JSON", json);
-
-      if (json.code !== "00" && json.code !== "01") {
-        throw new Error("Login EMT falló: " + (json.description || json.code));
-      }
-
-      accessToken = json.data[0].accessToken;
-      console.log("ACCESS TOKEN", accessToken);
-      return accessToken;
+    if (!res.ok) {
+      throw new Error("Error HTTP en login: " + res.status);
     }
 
-    // Obtener llegadas para una parada
-    async function getArrivals(stopId) {
-      if (!accessToken) {
-        await login();
-      }
+    const json = await res.json();
+    console.log("LOGIN JSON", json);
 
-      const res = await fetch(
-        `${BASE_URL}/transport/busemtmad/stops/${stopId}/arrives/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "accessToken": accessToken
-          },
-          body: JSON.stringify({
-            stopId: stopId,
-            Text_EstimationsRequired_YN: "Y",
-            Urban_UseYN: "Y"
-          })
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error("Error HTTP en arrives (" + stopId + "): " + res.status);
-      }
-
-      const json = await res.json();
-      console.log("ARRIVES JSON stop", stopId, json);
-
-      if (json.code !== "00") {
-        // si el token caducó o similar, reintentamos una vez
-        if (json.code === "01" || json.code === "02") {
-          accessToken = null;
-          return getArrivals(stopId);
-        }
-        throw new Error("Error API arrives (" + stopId + "): " + (json.description || json.code));
-      }
-
-      const data = json.data && json.data[0] && json.data[0].Arrive
-        ? json.data[0].Arrive
-        : [];
-
-      return data;
+    if (json.code !== "00" && json.code !== "01") {
+      throw new Error("Login EMT falló: " + (json.description || json.code));
     }
 
-    function renderStop(stopConfig, arrivals) {
-      const { id, filterLines } = stopConfig;
-      const listEl = document.getElementById(`buses-${id}`);
-      listEl.innerHTML = "";
+    accessToken = json.data[0].accessToken;
+    return accessToken;
+  }
 
-      let filtered = arrivals;
+  async function getArrivals(stopId) {
+    if (!accessToken) {
+      await login();
+    }
 
-      if (filterLines && filterLines.length) {
-        filtered = arrivals.filter(a =>
-          filterLines.includes(String(a.line).trim())
-        );
-      }
-
-      if (!filtered.length) {
-        const li = document.createElement("li");
-        li.className = "empty";
-        li.textContent = "No hay buses previstos ahora mismo.";
-        listEl.appendChild(li);
-        return;
-      }
-
-      filtered
-        .sort((a, b) => (a.estimateArrive || 0) - (b.estimateArrive || 0))
-        .forEach(arr => {
-          const li = document.createElement("li");
-
-          const minutes = arr.estimateArrive != null
-            ? Math.round(arr.estimateArrive / 60)
-            : null;
-
-          // Clase base
-          let className = "bus-item";
-
-          // Colores según el tiempo que queda (según tu leyenda)
-          if (minutes != null) {
-            if (minutes < 15) {
-              className += " urgent";
-            } else if (minutes < 20) {
-              className += " soon";
+    const res = await fetch(
+            `${BASE_URL}/transport/busemtmad/stops/${stopId}/arrives/`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "accessToken": accessToken
+              },
+              body: JSON.stringify({
+                stopId: stopId,
+                Text_EstimationsRequired_YN: "Y",
+                Urban_UseYN: "Y"
+              })
             }
-          }
+    );
 
-          li.className = className;
+    if (!res.ok) {
+      throw new Error("Error HTTP en arrives (" + stopId + "): " + res.status);
+    }
 
-          // Cabecera del bus (sin acordeón)
-          const header = document.createElement("div");
-          header.className = "bus-header";
+    const json = await res.json();
+    console.log("ARRIVES JSON stop", stopId, json);
 
-          const left = document.createElement("div");
-          left.className = "bus-header-left";
-          left.innerHTML = `
-            <div class="bus-main">Línea ${arr.line} → ${arr.destination || ""}</div>
+    if (json.code !== "00") {
+      if (json.code === "01" || json.code === "02") {
+        accessToken = null;
+        return getArrivals(stopId);
+      }
+      throw new Error("Error API arrives (" + stopId + "): " + (json.description || json.code));
+    }
+
+    const data = json.data && json.data[0] && json.data[0].Arrive
+            ? json.data[0].Arrive
+            : [];
+
+    return data;
+  }
+
+  function renderStop(stopConfig, arrivals) {
+    const { id, filterLines } = stopConfig;
+    const listEl = document.getElementById(`buses-${id}`);
+    const statusWrapper = document.getElementById(`status-${id}`);
+    if (!listEl || !statusWrapper) return;
+
+    const statusText = statusWrapper.querySelector("span:nth-child(2)");
+
+    listEl.innerHTML = "";
+
+    let filtered = arrivals;
+    if (filterLines && filterLines.length) {
+      filtered = arrivals.filter(a =>
+              filterLines.includes(String(a.line).trim())
+      );
+    }
+
+    if (!filtered.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "No hay buses previstos ahora mismo.";
+      listEl.appendChild(li);
+      statusWrapper.classList.remove("error");
+      if (statusText) statusText.textContent = "Sin previsiones ahora mismo.";
+      return;
+    }
+
+    statusWrapper.classList.remove("error");
+    if (statusText) statusText.textContent = "Datos en tiempo real.";
+
+    filtered
+            .sort((a, b) => (a.estimateArrive || 0) - (b.estimateArrive || 0))
+            .forEach(arr => {
+              const li = document.createElement("li");
+
+              const minutes = arr.estimateArrive != null
+                      ? Math.round(arr.estimateArrive / 60)
+                      : null;
+
+              let className = "bus-item";
+              if (minutes != null) {
+                if (minutes < 15) {
+                  className += " urgent";
+                } else if (minutes < 20) {
+                  className += " soon";
+                }
+              }
+              li.className = className;
+
+              const left = document.createElement("div");
+              left.className = "bus-left";
+
+              const lineBadge = document.createElement("div");
+              lineBadge.className = "line-badge";
+              // texto dentro con efecto desplazamiento LED
+              lineBadge.innerHTML = `<span class="line-text">${arr.line}</span>`;
+
+              const textBlock = document.createElement("div");
+              textBlock.className = "bus-text";
+              textBlock.innerHTML = `
+            <div class="bus-main">${arr.destination || "Destino no disponible"}</div>
             <div class="bus-sub">
               Distancia aprox: ${arr.DistanceBus != null ? arr.DistanceBus + " m" : "-"}
             </div>
           `;
 
-          const right = document.createElement("div");
-          right.className = "bus-header-right";
-          right.textContent =
-            minutes === 0
-              ? "Llegando"
-              : (minutes != null ? `${minutes} min` : "? min");
+              left.appendChild(lineBadge);
+              left.appendChild(textBlock);
 
-          header.appendChild(left);
-          header.appendChild(right);
+              const right = document.createElement("div");
+              right.className = "bus-right";
 
-          li.appendChild(header);
-          listEl.appendChild(li);
-        });
+              const pill = document.createElement("div");
+              pill.className = "pill-minutes";
+
+              if (minutes === 0) {
+                pill.textContent = "Llegando";
+              } else if (minutes != null) {
+                pill.textContent = `${minutes} min`;
+              } else {
+                pill.textContent = "? min";
+              }
+
+              const label = document.createElement("div");
+              label.className = "pill-label";
+              if (minutes != null) {
+                if (minutes < 10) {
+                  label.textContent = "Muy justo";
+                } else if (minutes < 15) {
+                  label.textContent = "Justo";
+                } else if (minutes < 20) {
+                  label.textContent = "Tienes margen";
+                } else {
+                  label.textContent = "Tiempo de sobra";
+                }
+              } else {
+                label.textContent = "Sin estimación precisa";
+              }
+
+              right.appendChild(pill);
+              right.appendChild(label);
+
+              li.appendChild(left);
+              li.appendChild(right);
+              listEl.appendChild(li);
+            });
+  }
+
+  async function refreshStop(stopConfig) {
+    const statusWrapper = document.getElementById(`status-${stopConfig.id}`);
+    const statusText = statusWrapper?.querySelector("span:nth-child(2)");
+    if (statusWrapper && statusText) {
+      statusWrapper.classList.remove("error");
+      statusText.textContent = "Actualizando…";
     }
 
-    async function refreshStop(stopConfig) {
-      const statusEl = document.getElementById(`status-${stopConfig.id}`);
-      statusEl.textContent = "Actualizando...";
-
-      try {
-        const arrivals = await getArrivals(stopConfig.id);
-        renderStop(stopConfig, arrivals);
-        statusEl.textContent = "Última actualización: " + new Date().toLocaleTimeString();
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "Error: " + err.message;
+    try {
+      const arrivals = await getArrivals(stopConfig.id);
+      renderStop(stopConfig, arrivals);
+    } catch (err) {
+      console.error(err);
+      if (statusWrapper && statusText) {
+        statusWrapper.classList.add("error");
+        statusText.textContent = "Error: " + err.message;
       }
     }
+  }
 
-    function refreshAll() {
-      STOPS.forEach(stop => refreshStop(stop));
+  async function refreshAll() {
+    if (globalStatusEl) {
+      globalStatusEl.textContent = "Actualizando todas las paradas…";
     }
+    await Promise.all(STOPS.map(stop => refreshStop(stop)));
+    if (globalStatusEl) {
+      globalStatusEl.textContent =
+              "Última actualización: " + new Date().toLocaleTimeString("es-ES");
+    }
+  }
 
-    // Acordeón principal (paradas)
-    function setupAccordion() {
-      const items = document.querySelectorAll(".accordion-item");
-      items.forEach(item => {
-        const header = item.querySelector(".accordion-header");
-        header.addEventListener("click", () => {
-          item.classList.toggle("open");
-        });
+  function setupAccordion() {
+    const items = document.querySelectorAll(".accordion-item");
+    items.forEach(item => {
+      const header = item.querySelector(".accordion-header");
+      if (!header) return;
+      header.addEventListener("click", () => {
+        item.classList.toggle("open");
       });
-    }
+    });
+  }
 
-    // Init
-    setupAccordion();
-    refreshAll();
-    // refresco cada 15s
-    setInterval(refreshAll, 15000);
-  </script>
+  setupAccordion();
+  refreshAll();
+  setInterval(refreshAll, 15000);
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      refreshAll();
+    });
+  }
+</script>
 </body>
 </html>
