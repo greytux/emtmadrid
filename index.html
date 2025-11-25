@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Próximos buses EMT</title>
+  <title>🐶Turrobuses</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -35,6 +35,7 @@
       align-items: flex-start;
       padding: 24px 12px;
 
+      /* Fondo azul oscuro con blur */
       background: radial-gradient(circle at 30% 20%, rgba(29,78,216,0.45), transparent 60%),
       radial-gradient(circle at 80% 80%, rgba(2,132,199,0.45), transparent 55%),
       #0b1220;
@@ -70,20 +71,6 @@
       display: flex;
       align-items: center;
       gap: 10px;
-    }
-
-    .title-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: radial-gradient(circle at 30% 20%, #60a5fa, #2563eb);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 700;
-      font-size: 18px;
-      box-shadow: 0 8px 20px rgba(37,99,235,0.45);
     }
 
     h1 {
@@ -523,6 +510,68 @@
       margin-top: 10px;
     }
 
+    /* Sección de paradas cercanas */
+    .nearby-section {
+      margin-top: 14px;
+      padding: 10px 12px 12px;
+      background: #eef2ff;
+      border-radius: 12px;
+      border: 1px solid #c7d2fe;
+    }
+
+    .nearby-title {
+      font-size: 13px;
+      font-weight: 650;
+      color: #111827;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nearby-badge {
+      font-size: 11px;
+      color: #4f46e5;
+      background: #e0e7ff;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .nearby-status {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .nearby-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nearby-item {
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .nearby-main {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 2px;
+    }
+
+    .nearby-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
     @media (max-width: 480px) {
       body {
         padding: 12px 8px;
@@ -555,10 +604,8 @@
 <div class="app-shell">
   <header class="app-header">
     <div class="title-block">
-      <div class="title-icon">E</div>
       <div>
-        <h1>Próximos buses EMT</h1>
-        <div class="subtitle">Paradas favoritas en tiempo real</div>
+        <h1>🐶Turrobuses</h1>
       </div>
     </div>
     <div class="refresh-block">
@@ -642,6 +689,18 @@
       </div>
       <div id="dynamic-stops"></div>
     </section>
+
+    <!-- Sección de paradas cercanas -->
+    <section class="nearby-section">
+      <div class="nearby-title">
+        Paradas cercanas
+        <span class="nearby-badge">Top 4</span>
+      </div>
+      <div class="nearby-status" id="nearby-status">
+        Usa el botón de refrescar para buscar paradas cerca de ti.
+      </div>
+      <ul class="nearby-list" id="nearby-list"></ul>
+    </section>
   </main>
 </div>
 
@@ -650,33 +709,30 @@
   const PASS = "Linares251291?";
   const BASE_URL = "https://openapi.emtmadrid.es/v2";
 
-  // Coordenadas aproximadas de las paradas (EJEMPLO: cambia por las reales)
-  // Formato: lat = 40.xxxxx, lon = -3.xxxxx
+  // Coordenadas aproximadas de las paradas fijas (EJEMPLO: ajusta a las reales si quieres más precisión)
   const STOP_COORDS = {
     3224: { lat: 40.4800, lon: -3.7000 }, // TODO: sustituir por coords reales de 3224
     2677: { lat: 40.5000, lon: -3.6900 }, // TODO: sustituir por coords reales de 2677
   };
 
-  // Guardamos la posición del usuario cuando nos la dé el navegador
+  // Ubicación del usuario
   let userLocation = null;
+  const WALK_SPEED_KMH = 5; // km/h
 
-  // Velocidad media andando (km/h)
-  const WALK_SPEED_KMH = 5;
-
-  // Paradas fijas iniciales
+  // Paradas fijas + las que se vayan añadiendo
   const STOPS = [
     { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
     { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
   ];
 
-  // Tiempo andando aproximado en minutos (fallback manual)
+  // Fallback de tiempo andando manual (si no hay geoloc)
   const WALK_TIMES = {
     3224: 7,
     2677: 6
-    // Las nuevas paradas ya no se configuran a mano, se intenta usar geolocalización
   };
 
   let accessToken = null;
+
   const globalStatusEl = document.getElementById("last-update-global");
   const refreshBtn = document.getElementById("refresh-now");
 
@@ -684,10 +740,16 @@
   const stopIdInput = document.getElementById("stop-id-input");
   const dynamicStopsContainer = document.getElementById("dynamic-stops");
 
-  // Pedir geolocalización al usuario
+  const nearbyStatusEl = document.getElementById("nearby-status");
+  const nearbyListEl = document.getElementById("nearby-list");
+
+  // ---- GEOLOCALIZACIÓN ----
   function initGeolocation() {
     if (!("geolocation" in navigator)) {
       console.warn("Geolocalización no disponible en este navegador.");
+      if (nearbyStatusEl) {
+        nearbyStatusEl.textContent = "Geolocalización no disponible en este dispositivo.";
+      }
       return;
     }
 
@@ -698,11 +760,13 @@
                 lon: pos.coords.longitude,
               };
               console.log("Ubicación del usuario:", userLocation);
-              // Al tener ubicación, refrescamos para recalcular tiempos andando
               refreshAll();
             },
             (err) => {
               console.warn("No se pudo obtener la ubicación:", err.message);
+              if (nearbyStatusEl) {
+                nearbyStatusEl.textContent = "No se ha podido obtener tu ubicación. Revisa permisos de geolocalización.";
+              }
             },
             {
               enableHighAccuracy: true,
@@ -712,9 +776,8 @@
     );
   }
 
-  // Distancia entre dos puntos (lat/lon) en metros (Haversine)
   function getDistanceMeters(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // radio tierra en metros
+    const R = 6371000;
     const toRad = (deg) => (deg * Math.PI) / 180;
 
     const dLat = toRad(lat2 - lat1);
@@ -730,10 +793,6 @@
     return R * c;
   }
 
-  // Devuelve minutos andando para una parada:
-  // 1) Si hay geolocalización + coords -> cálculo real
-  // 2) Si no, usa WALK_TIMES[stopId] si existe
-  // 3) Si no, null
   function getWalkingMinutes(stopId) {
     if (userLocation && STOP_COORDS[stopId]) {
       const stop = STOP_COORDS[stopId];
@@ -755,6 +814,7 @@
     return null;
   }
 
+  // ---- LOGIN EMT ----
   async function login() {
     const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
       method: "GET",
@@ -779,6 +839,7 @@
     return accessToken;
   }
 
+  // ---- LLEGADAS PARADA ----
   async function getArrivals(stopId) {
     if (!accessToken) {
       await login();
@@ -822,6 +883,57 @@
     return data;
   }
 
+  // ---- PARADAS CERCANAS (API) ----
+  async function getNearbyStops() {
+    if (!userLocation) {
+      throw new Error("No hay ubicación disponible.");
+    }
+    if (!accessToken) {
+      await login();
+    }
+
+    const { lat, lon } = userLocation;
+    const radius = 400; // metros
+
+    const res = await fetch(
+            `${BASE_URL}/transport/busemtmad/stops/arroundxy/${lon}/${lat}/${radius}/`,
+            {
+              method: "GET",
+              headers: {
+                "accessToken": accessToken
+              }
+            }
+    );
+
+    if (!res.ok) {
+      throw new Error("Error HTTP en paradas cercanas: " + res.status);
+    }
+
+    const json = await res.json();
+    console.log("NEARBY JSON", json);
+
+    if (json.code !== "00") {
+      if (json.code === "01" || json.code === "02") {
+        accessToken = null;
+        return getNearbyStops();
+      }
+      throw new Error("Error API paradas cercanas: " + (json.description || json.code));
+    }
+
+    let stopsArr = [];
+
+    if (Array.isArray(json.data) && json.data.length > 0) {
+      const d0 = json.data[0];
+      if (Array.isArray(d0.stops)) stopsArr = d0.stops;
+      else if (Array.isArray(d0.Stops)) stopsArr = d0.Stops;
+      else if (Array.isArray(d0.Stop)) stopsArr = d0.Stop;
+      else if (Array.isArray(json.data)) stopsArr = json.data;
+    }
+
+    return stopsArr;
+  }
+
+  // ---- RENDER PARADA INDIVIDUAL ----
   function renderStop(stopConfig, arrivals) {
     const { id, filterLines } = stopConfig;
     const listEl = document.getElementById(`buses-${id}`);
@@ -830,7 +942,6 @@
 
     const statusText = statusWrapper.querySelector("span:nth-child(2)");
 
-    // Tiempo andando (dinámico si se puede)
     const walkEl = document.getElementById(`walk-${id}`);
     const reachEl = document.getElementById(`reach-${id}`);
 
@@ -854,7 +965,7 @@
       );
     }
 
-    // Buscar minutos del próximo bus (el más cercano)
+    // Próximo bus (minutos)
     let nextBusMinutes = null;
     filtered.forEach(arr => {
       if (arr.estimateArrive != null) {
@@ -865,7 +976,6 @@
       }
     });
 
-    // Mensaje de margen: tiempo que queda para llegar al próximo bus
     if (reachEl) {
       if (walkingMinutes != null && nextBusMinutes != null) {
         const diff = nextBusMinutes - walkingMinutes;
@@ -998,17 +1108,134 @@
     }
   }
 
+  // ---- RENDER PARADAS CERCANAS ----
+  function renderNearbyStops(stops) {
+    if (!nearbyListEl) return;
+    nearbyListEl.innerHTML = "";
+
+    if (!stops || !stops.length) {
+      const li = document.createElement("li");
+      li.className = "nearby-item";
+      li.innerHTML = `
+          <div class="nearby-main">Sin paradas cercanas en el radio seleccionado</div>
+          <div class="nearby-sub">Prueba a moverte o ampliar el radio en el código si quieres.</div>
+        `;
+      nearbyListEl.appendChild(li);
+      return;
+    }
+
+    const top4 = stops.slice(0, 4);
+
+    top4.forEach(stop => {
+      const li = document.createElement("li");
+      li.className = "nearby-item";
+
+      const stopId =
+              stop.stopId ??
+              stop.IdStop ??
+              stop.idStop ??
+              stop.id ??
+              stop.stopNum ??
+              "¿?";
+
+      const name =
+              stop.name ??
+              stop.stopName ??
+              stop.StopName ??
+              `Parada ${stopId}`;
+
+      let meters = null;
+      let distanceText = "";
+      let walkText = "";
+
+      if (userLocation) {
+        if (stop.geometry && Array.isArray(stop.geometry.coordinates)) {
+          const coords = stop.geometry.coordinates;
+          const lon = coords[0];
+          const lat = coords[1];
+          const dist = getDistanceMeters(
+                  userLocation.lat,
+                  userLocation.lon,
+                  lat,
+                  lon
+          );
+          meters = Math.round(dist);
+        } else {
+          const possible =
+                  stop.meters ??
+                  stop.distance ??
+                  stop.Distance ??
+                  stop.Dist ??
+                  null;
+          if (possible != null) {
+            meters = Math.round(possible);
+          }
+        }
+
+        if (meters != null) {
+          distanceText = `~${meters} m`;
+          const mins = Math.max(
+                  1,
+                  Math.round((meters / 1000 / WALK_SPEED_KMH) * 60)
+          );
+          walkText = `${mins} min andando aprox.`;
+        }
+      }
+
+      li.innerHTML = `
+          <div class="nearby-main">${name}</div>
+          <div class="nearby-sub">
+            Parada ${stopId}
+            ${distanceText ? " · " + distanceText : ""}
+            ${walkText ? " · " + walkText : ""}
+          </div>
+        `;
+
+      nearbyListEl.appendChild(li);
+    });
+  }
+
+  async function refreshNearbyStops() {
+    if (!nearbyStatusEl || !nearbyListEl) return;
+
+    if (!userLocation) {
+      nearbyStatusEl.textContent =
+              "Activa la geolocalización del navegador para ver paradas cercanas.";
+      nearbyListEl.innerHTML = "";
+      return;
+    }
+
+    nearbyStatusEl.textContent = "Buscando paradas cercanas…";
+
+    try {
+      const stops = await getNearbyStops();
+      renderNearbyStops(stops);
+      nearbyStatusEl.textContent = `Mostrando las ${Math.min(
+              4,
+              stops.length
+      )} paradas más cercanas.`;
+    } catch (err) {
+      console.error(err);
+      nearbyStatusEl.textContent =
+              "No se han podido cargar las paradas cercanas.";
+      nearbyListEl.innerHTML = "";
+    }
+  }
+
+  // ---- REFRESH GLOBAL ----
   async function refreshAll() {
     if (globalStatusEl) {
       globalStatusEl.textContent = "Actualizando todas las paradas…";
     }
     await Promise.all(STOPS.map(stop => refreshStop(stop)));
+    await refreshNearbyStops();
     if (globalStatusEl) {
       globalStatusEl.textContent =
               "Última actualización: " + new Date().toLocaleTimeString("es-ES");
     }
   }
 
+  // ---- ACCORDIÓN ----
   function setupAccordion() {
     const items = document.querySelectorAll(".accordion-item");
     items.forEach(item => {
@@ -1020,11 +1247,12 @@
     });
   }
 
-  // Crear dinámicamente un acordeón nuevo para una parada (con validación)
+  // ---- PARADAS DINÁMICAS ----
   async function createDynamicStopAccordion(stopId) {
-    // Si ya existe en STOPS, solo la abrimos y refrescamos
     if (STOPS.some(s => s.id === stopId)) {
-      const existing = document.querySelector(`.accordion-item[data-stop-id="${stopId}"]`);
+      const existing = document.querySelector(
+              `.accordion-item[data-stop-id="${stopId}"]`
+      );
       if (existing) {
         existing.classList.add("open");
       }
@@ -1032,17 +1260,17 @@
       return;
     }
 
-    // Validar contra la API: si falla, mostramos error y no añadimos
     let arrivals;
     try {
       arrivals = await getArrivals(stopId);
     } catch (err) {
       console.error(err);
-      alert(`No se ha podido obtener información para la parada ${stopId}. Comprueba que el número es correcto.`);
+      alert(
+              `No se ha podido obtener información para la parada ${stopId}. Comprueba que el número es correcto.`
+      );
       return;
     }
 
-    // Si la llamada es correcta, añadimos la parada (aunque no haya buses ahora mismo)
     const stopConfig = { id: stopId, label: `Parada ${stopId}` };
     STOPS.push(stopConfig);
 
@@ -1075,11 +1303,9 @@
       article.classList.toggle("open");
     });
 
-    // Pintamos usando los arrivals que ya tenemos
     renderStop(stopConfig, arrivals);
   }
 
-  // Formulario: añadir parada nueva
   if (addStopForm && stopIdInput) {
     addStopForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1097,9 +1323,9 @@
     });
   }
 
-  // Init
+  // ---- INIT ----
   setupAccordion();
-  initGeolocation(); // Pedimos ubicación al cargar
+  initGeolocation();
   refreshAll();
   setInterval(refreshAll, 15000);
 
