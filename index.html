@@ -73,32 +73,12 @@
             gap: 10px;
         }
 
-        .title-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: radial-gradient(circle at 30% 20%, #60a5fa, #2563eb);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 700;
-            font-size: 18px;
-            box-shadow: 0 8px 20px rgba(37,99,235,0.45);
-        }
-
         h1 {
             font-size: 20px;
             font-weight: 650;
             margin: 0;
             letter-spacing: 0.01em;
             color: #0f172a;
-        }
-
-        .subtitle {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 2px;
         }
 
         .refresh-block {
@@ -450,6 +430,19 @@
             padding: 4px 2px 6px;
         }
 
+        /* Enlace ver ubicación */
+        .location-link {
+            font-size: 11px;
+            color: #2563eb;
+            text-decoration: none;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .location-link:hover {
+            text-decoration: underline;
+        }
+
         /* Formulario dinámico de paradas */
         .dynamic-controls {
             margin-top: 12px;
@@ -557,33 +550,8 @@
             margin-bottom: 6px;
         }
 
-        .nearby-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .nearby-item {
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            padding: 8px 10px;
-            font-size: 12px;
-        }
-
-        .nearby-main {
-            font-size: 13px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 2px;
-        }
-
-        .nearby-sub {
-            font-size: 11px;
-            color: var(--muted);
+        #nearby-accordion {
+            margin-top: 6px;
         }
 
         @media (max-width: 480px) {
@@ -713,7 +681,7 @@
             <div class="nearby-status" id="nearby-status">
                 Usa el botón de refrescar para buscar paradas cerca de ti.
             </div>
-            <ul class="nearby-list" id="nearby-list"></ul>
+            <div id="nearby-accordion"></div>
         </section>
     </main>
 </div>
@@ -721,28 +689,21 @@
 <script>
     const USER = "diegojesus.escudero@gmail.com";
     const PASS = "Linares251291?";
-    const BASE_URL = "https://openapi.emtmadrid.es/v2";
 
-    const STOP_COORDS = {
-        3224: { lat: 40.4912, lon: -3.6881 }, // TODO: sustituir por coords reales de 3224 traves de API
-        2677: { lat: 40.4986, lon: -3.6866 }, // TODO: sustituir por coords reales de 2677 traves de API
-    };
+    const BASE_URL_V2 = "https://openapi.emtmadrid.es/v2";
+    const BASE_URL_V1 = "https://openapi.emtmadrid.es/v1";
 
-    // Ubicación del usuario
+    // Coordenadas de paradas (se rellenan dinámicamente usando la API detail v1)
+    const STOP_COORDS = {};
+
     let userLocation = null;
     const WALK_SPEED_KMH = 5; // km/h
 
-    // Paradas fijas + las que se vayan añadiendo
+    // Paradas fijas + las que se vayan añadiendo manualmente
     const STOPS = [
         { id: 3224, label: "Herrera Oria - Labastida (TRABAJO) - Parada 3224" },
         { id: 2677, label: "Fuente de la Carra hacia el centro - Parada 2677", filterLines: ["66", "137"] }
     ];
-
-    // Fallback de tiempo andando manual (si no hay geoloc)
-    const WALK_TIMES = {
-        3224: 7,
-        2677: 6
-    };
 
     let accessToken = null;
 
@@ -754,7 +715,7 @@
     const dynamicStopsContainer = document.getElementById("dynamic-stops");
 
     const nearbyStatusEl = document.getElementById("nearby-status");
-    const nearbyListEl = document.getElementById("nearby-list");
+    const nearbyAccordionEl = document.getElementById("nearby-accordion");
 
     // --- GEOLOCALIZACIÓN: se llama en cada refreshAll ---
     function updateUserLocation() {
@@ -809,30 +770,25 @@
         return R * c;
     }
 
+    // Solo calcula minutos si hay userLocation y coords de la parada
     function getWalkingMinutes(stopId) {
-        if (userLocation && STOP_COORDS[stopId]) {
-            const stop = STOP_COORDS[stopId];
-            const dist = getDistanceMeters(
-                userLocation.lat,
-                userLocation.lon,
-                stop.lat,
-                stop.lon
-            );
-            const minutes = (dist / 1000 / WALK_SPEED_KMH) * 60;
-            return Math.round(minutes);
-        }
+        if (!userLocation) return null;
+        const stop = STOP_COORDS[stopId];
+        if (!stop) return null;
 
-        const manual = WALK_TIMES[stopId];
-        if (manual != null) {
-            return manual;
-        }
-
-        return null;
+        const dist = getDistanceMeters(
+            userLocation.lat,
+            userLocation.lon,
+            stop.lat,
+            stop.lon
+        );
+        const minutes = (dist / 1000 / WALK_SPEED_KMH) * 60;
+        return Math.round(minutes);
     }
 
     // ---- LOGIN EMT ----
     async function login() {
-        const res = await fetch(`${BASE_URL}/mobilitylabs/user/login/`, {
+        const res = await fetch(`${BASE_URL_V2}/mobilitylabs/user/login/`, {
             method: "GET",
             headers: {
                 "email": USER,
@@ -862,7 +818,7 @@
         }
 
         const res = await fetch(
-            `${BASE_URL}/transport/busemtmad/stops/${stopId}/arrives/`,
+            `${BASE_URL_V2}/transport/busemtmad/stops/${stopId}/arrives/`,
             {
                 method: "POST",
                 headers: {
@@ -899,6 +855,72 @@
         return data;
     }
 
+    // ---- DETALLE DE PARADA PARA COORDENADAS (via API v1) ----
+    async function fetchStopCoords(stopId) {
+        if (STOP_COORDS[stopId]) return STOP_COORDS[stopId];
+        if (!accessToken) {
+            await login();
+        }
+
+        const res = await fetch(
+            `${BASE_URL_V1}/transport/busemtmad/stops/${stopId}/detail/`,
+            {
+                method: "GET",
+                headers: {
+                    "accessToken": accessToken
+                }
+            }
+        );
+
+        if (!res.ok) {
+            console.warn("Error HTTP en detalle de parada:", res.status);
+            return null;
+        }
+
+        const json = await res.json();
+        console.log("DETAIL JSON stop", stopId, json);
+
+        if (json.code !== "00") {
+            console.warn("Error API detalle parada:", json.description || json.code);
+            return null;
+        }
+
+        let lat = null;
+        let lon = null;
+
+        if (Array.isArray(json.data) && json.data.length > 0) {
+            const d0 = json.data[0];
+            if (d0.geometry && Array.isArray(d0.geometry.coordinates)) {
+                const coords = d0.geometry.coordinates;
+                lon = parseFloat(coords[0]);
+                lat = parseFloat(coords[1]);
+            } else {
+                const latCandidates = ["lat", "Lat", "latitude", "Latitude", "GeographicY", "Y"];
+                const lonCandidates = ["lon", "Lon", "longitude", "Longitude", "GeographicX", "X"];
+
+                for (const lk of latCandidates) {
+                    if (d0[lk] != null) {
+                        lat = parseFloat(d0[lk]);
+                        break;
+                    }
+                }
+                for (const ok of lonCandidates) {
+                    if (d0[ok] != null) {
+                        lon = parseFloat(d0[ok]);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (lat != null && lon != null && !Number.isNaN(lat) && !Number.isNaN(lon)) {
+            STOP_COORDS[stopId] = { lat, lon };
+            return STOP_COORDS[stopId];
+        }
+
+        return null;
+    }
+
     // ---- PARADAS CERCANAS (API) ----
     async function getNearbyStops() {
         if (!userLocation) {
@@ -912,7 +934,7 @@
         const radius = 400; // metros
 
         const res = await fetch(
-            `${BASE_URL}/transport/busemtmad/stops/arroundxy/${lon}/${lat}/${radius}/`,
+            `${BASE_URL_V2}/transport/busemtmad/stops/arroundxy/${lon}/${lat}/${radius}/`,
             {
                 method: "GET",
                 headers: {
@@ -961,14 +983,14 @@
         const walkEl = document.getElementById(`walk-${id}`);
         const reachEl = document.getElementById(`reach-${id}`);
 
+        // Tiempo andando solo si hay geoloc + coords
         let walkingMinutes = null;
         if (walkEl) {
             walkingMinutes = getWalkingMinutes(id);
             if (walkingMinutes != null) {
                 walkEl.textContent = `Tiempo andando aproximado hasta la parada: ${walkingMinutes} min`;
             } else {
-                walkEl.textContent =
-                    "Tiempo andando aproximado: no configurado o sin ubicación.";
+                walkEl.textContent = "";
             }
         }
 
@@ -1005,12 +1027,8 @@
             } else if (nextBusMinutes != null) {
                 reachEl.textContent =
                     `Próximo bus en ~${nextBusMinutes} min. Sin estimar tu tiempo andando.`;
-            } else if (walkingMinutes != null) {
-                reachEl.textContent =
-                    `Tiempo andando ~${walkingMinutes} min. Sin estimar llegada del próximo bus.`;
             } else {
-                reachEl.textContent =
-                    "Sin datos suficientes para calcular si llegas al próximo bus.";
+                reachEl.textContent = "";
             }
         }
 
@@ -1124,100 +1142,116 @@
         }
     }
 
-    // ---- RENDER PARADAS CERCANAS ----
-    function renderNearbyStops(stops) {
-        if (!nearbyListEl) return;
-        nearbyListEl.innerHTML = "";
+    // ---- RENDER PARADAS CERCANAS COMO ACORDEONES ----
+    async function renderNearbyStops(stops) {
+        if (!nearbyAccordionEl) return;
+        nearbyAccordionEl.innerHTML = "";
 
         if (!stops || !stops.length) {
-            const li = document.createElement("li");
-            li.className = "nearby-item";
-            li.innerHTML = `
-          <div class="nearby-main">Sin paradas cercanas en el radio seleccionado</div>
-          <div class="nearby-sub">Prueba a moverte o ampliar el radio en el código si quieres.</div>
-        `;
-            nearbyListEl.appendChild(li);
+            const div = document.createElement("div");
+            div.className = "empty";
+            div.textContent = "Sin paradas cercanas en el radio seleccionado.";
+            nearbyAccordionEl.appendChild(div);
             return;
         }
 
-        const top4 = stops.slice(0, 4);
+        // No repetir paradas que ya están en STOPS (3224, 2677, dinámicas)
+        const baseIds = new Set(STOPS.map(s => String(s.id)));
 
-        top4.forEach(stop => {
-            const li = document.createElement("li");
-            li.className = "nearby-item";
+        const filtered = stops
+            .map(stop => {
+                const stopId =
+                    stop.stopId ??
+                    stop.IdStop ??
+                    stop.idStop ??
+                    stop.id ??
+                    stop.stopNum ??
+                    null;
+                return { raw: stop, stopId };
+            })
+            .filter(s => s.stopId != null && !baseIds.has(String(s.stopId)));
 
-            const stopId =
-                stop.stopId ??
-                stop.IdStop ??
-                stop.idStop ??
-                stop.id ??
-                stop.stopNum ??
-                "¿?";
+        if (!filtered.length) {
+            const div = document.createElement("div");
+            div.className = "empty";
+            div.textContent = "Las paradas cercanas ya están entre tus paradas favoritas.";
+            nearbyAccordionEl.appendChild(div);
+            return;
+        }
 
+        const top4 = filtered.slice(0, 4);
+        const stopConfigs = [];
+
+        for (const { raw: stop, stopId } of top4) {
+            const idNum = parseInt(stopId, 10);
             const name =
                 stop.name ??
                 stop.stopName ??
                 stop.StopName ??
-                `Parada ${stopId}`;
+                `Parada ${idNum}`;
 
-            let meters = null;
-            let distanceText = "";
-            let walkText = "";
-
-            if (userLocation) {
-                if (stop.geometry && Array.isArray(stop.geometry.coordinates)) {
-                    const coords = stop.geometry.coordinates;
-                    const lon = coords[0];
-                    const lat = coords[1];
-                    const dist = getDistanceMeters(
-                        userLocation.lat,
-                        userLocation.lon,
-                        lat,
-                        lon
-                    );
-                    meters = Math.round(dist);
-                } else {
-                    const possible =
-                        stop.meters ??
-                        stop.distance ??
-                        stop.Distance ??
-                        stop.Dist ??
-                        null;
-                    if (possible != null) {
-                        meters = Math.round(possible);
-                    }
-                }
-
-                if (meters != null) {
-                    distanceText = `~${meters} m`;
-                    const mins = Math.max(
-                        1,
-                        Math.round((meters / 1000 / WALK_SPEED_KMH) * 60)
-                    );
-                    walkText = `${mins} min andando aprox.`;
+            // Guardamos coords de geometry en STOP_COORDS para walking + mapa
+            if (stop.geometry && Array.isArray(stop.geometry.coordinates)) {
+                const coords = stop.geometry.coordinates;
+                const lon = parseFloat(coords[0]);
+                const lat = parseFloat(coords[1]);
+                if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+                    STOP_COORDS[idNum] = { lat, lon };
                 }
             }
 
-            li.innerHTML = `
-          <div class="nearby-main">${name}</div>
-          <div class="nearby-sub">
-            Parada ${stopId}
-            ${distanceText ? " · " + distanceText : ""}
-            ${walkText ? " · " + walkText : ""}
-          </div>
-        `;
+            let locationLinkHtml = "";
+            if (STOP_COORDS[idNum]) {
+                const c = STOP_COORDS[idNum];
+                const mapUrl = `https://www.google.com/maps?q=${c.lat},${c.lon}`;
+                locationLinkHtml = `<a class="location-link" href="${mapUrl}" target="_blank" rel="noopener noreferrer">Ver ubicación en mapa</a>`;
+            }
 
-            nearbyListEl.appendChild(li);
-        });
+            const article = document.createElement("article");
+            // Cerrados por defecto
+            article.className = "accordion-item";
+            article.dataset.stopId = String(idNum);
+            article.innerHTML = `
+        <button class="accordion-header">
+          <div class="accordion-header-main">
+            <div class="stop-name">${name}</div>
+            <div class="stop-subtitle">Parada ${idNum} · Cercana a tu ubicación</div>
+          </div>
+          <span class="badge">${idNum}</span>
+        </button>
+        <div class="accordion-panel">
+          <div class="walk-time" id="walk-${idNum}"></div>
+          <div class="reach-time" id="reach-${idNum}"></div>
+          ${locationLinkHtml}
+          <div class="status" id="status-${idNum}">
+            <span class="status-dot"></span>
+            <span>Cargando…</span>
+          </div>
+          <ul class="bus-list" id="buses-${idNum}"></ul>
+        </div>
+      `;
+
+            nearbyAccordionEl.appendChild(article);
+
+            const header = article.querySelector(".accordion-header");
+            header.addEventListener("click", () => {
+                article.classList.toggle("open");
+            });
+
+            stopConfigs.push({ id: idNum });
+        }
+
+        // Cargamos llegadas y tiempos para cada una de las cercanas
+        await Promise.all(stopConfigs.map(cfg => refreshStop(cfg)));
     }
 
     async function refreshNearbyStops() {
-        if (!nearbyStatusEl || !nearbyListEl) return;
+        if (!nearbyStatusEl) return;
 
         if (!userLocation) {
             nearbyStatusEl.textContent =
                 "Activa la geolocalización del navegador para ver paradas cercanas.";
-            nearbyListEl.innerHTML = "";
+            if (nearbyAccordionEl) nearbyAccordionEl.innerHTML = "";
             return;
         }
 
@@ -1225,16 +1259,13 @@
 
         try {
             const stops = await getNearbyStops();
-            renderNearbyStops(stops);
-            nearbyStatusEl.textContent = `Mostrando las ${Math.min(
-                4,
-                stops.length
-            )} paradas más cercanas.`;
+            await renderNearbyStops(stops);
+            nearbyStatusEl.textContent = "Mostrando las paradas cercanas a tu ubicación.";
         } catch (err) {
             console.error(err);
             nearbyStatusEl.textContent =
                 "No se han podido cargar las paradas cercanas.";
-            nearbyListEl.innerHTML = "";
+            if (nearbyAccordionEl) nearbyAccordionEl.innerHTML = "";
         }
     }
 
@@ -1247,10 +1278,15 @@
         // 1) Actualizar ubicación actual antes de recalcular tiempos
         await updateUserLocation();
 
-        // 2) Refrescar paradas configuradas
+        // 2) Obtener coords de paradas favoritas (3224, 2677 y las dinámicas ya presentes)
+        await Promise.all(
+            STOPS.map(s => fetchStopCoords(s.id).catch(() => null))
+        );
+
+        // 3) Refrescar paradas favoritas (fijas + dinámicas)
         await Promise.all(STOPS.map(stop => refreshStop(stop)));
 
-        // 3) Refrescar paradas cercanas en base a la ubicación recién actualizada
+        // 4) Refrescar paradas cercanas en base a la ubicación recién actualizada
         await refreshNearbyStops();
 
         if (globalStatusEl) {
@@ -1284,6 +1320,7 @@
             return;
         }
 
+        // Verificamos que la parada existe y tiene datos
         let arrivals;
         try {
             arrivals = await getArrivals(stopId);
@@ -1298,9 +1335,24 @@
         const stopConfig = { id: stopId, label: `Parada ${stopId}` };
         STOPS.push(stopConfig);
 
+        // Intentamos obtener coords desde API v1
+        try {
+            await fetchStopCoords(stopId);
+        } catch (e) {
+            console.warn("No se pudieron obtener coords para la parada dinámica", stopId);
+        }
+
         const article = document.createElement("article");
         article.className = "accordion-item open";
         article.dataset.stopId = String(stopId);
+
+        let locationLinkHtml = "";
+        if (STOP_COORDS[stopId]) {
+            const c = STOP_COORDS[stopId];
+            const mapUrl = `https://www.google.com/maps?q=${c.lat},${c.lon}`;
+            locationLinkHtml = `<a class="location-link" href="${mapUrl}" target="_blank" rel="noopener noreferrer">Ver ubicación en mapa</a>`;
+        }
+
         article.innerHTML = `
         <button class="accordion-header">
           <div class="accordion-header-main">
@@ -1312,6 +1364,7 @@
         <div class="accordion-panel">
           <div class="walk-time" id="walk-${stopId}"></div>
           <div class="reach-time" id="reach-${stopId}"></div>
+          ${locationLinkHtml}
           <div class="status" id="status-${stopId}">
             <span class="status-dot"></span>
             <span>Datos cargados.</span>
