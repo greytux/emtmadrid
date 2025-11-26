@@ -25,6 +25,11 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden; /* nada de scroll horizontal en móvil */
+        }
+
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             margin: 0;
@@ -44,15 +49,16 @@
         .app-shell {
             width: 100%;
             max-width: 720px;
-            margin: 0 auto;  /* 👈 centra el bloque */
+            margin: 0 auto;
             background: rgba(255,255,255,0.92);
             border-radius: var(--radius-lg);
             box-shadow: 0 18px 40px rgba(15,23,42,0.32);
             border: 1px solid rgba(148,163,184,0.35);
-            overflow: hidden;
+            overflow: hidden;              /* 👈 muy importante */
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
         }
+
 
         /* Header superior */
         .app-header {
@@ -199,21 +205,25 @@
         .slider {
             overflow: hidden;
             position: relative;
+            max-width: 100%;
         }
 
         .slides {
             display: flex;
             transition: transform 0.25s ease-out;
+            max-width: 100%;
         }
 
         .slide {
-            min-width: 100%;   /* cada slide ocupa exactamente el ancho del shell */
+            min-width: 100%;
             flex-shrink: 0;
+            max-width: 100%;
         }
 
-        /* Accordion base */
         .accordion {
-            padding: 10px 14px 14px;
+            padding: 10px 12px 14px; /* baja un pelín el padding lateral */
+            max-width: 100%;
+            overflow-x: hidden;      /* 👈 por si algún hijo se pasa de listo */
         }
 
         .accordion-item {
@@ -348,6 +358,8 @@
             justify-content: space-between;
             align-items: center;
             gap: 8px;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .bus-item.soon {
