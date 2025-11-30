@@ -18,7 +18,7 @@ function normalizeLine(l) {
     return String(l).trim().replace(/^0+/, "");
 }
 
-function renderStop(stopConfig, arrivals) {
+export function renderStop(stopConfig, arrivals) {
     const { id, filterLines } = stopConfig;
 
     const listEl = document.getElementById(`buses-${id}`);
