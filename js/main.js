@@ -139,6 +139,5 @@ if (myLineInput) {
 }
 
 // Init
-setupAccordion();
 refreshAll();
 setInterval(refreshAll, 60000);
