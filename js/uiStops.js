@@ -472,29 +472,7 @@ export async function createDynamicStopAccordion(stopId) {
     }
 }
 
-if (addStopForm && stopIdInput) {
-    addStopForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const raw = stopIdInput.value.trim();
-
-        if (!raw) return;
-        const stopId = parseInt(raw, 10);
-        if (Number.isNaN(stopId) || stopId <= 0) {
-            alert("Introduce un número de parada válido.");
-            return;
-        }
-
-        await createDynamicStopAccordion(stopId);
-        stopIdInput.value = "";
-    });
-}
-
 // ---- LISTENERS DE FILTROS ----
-if (myLineInput) {
-    myLineInput.addEventListener("input", () => {
-        filterMyStopsByLine(myLineInput.value.trim());
-    });
-}
 
 // Aplicar / quitar filtro de paradas cercanas
 if (nearbyApplyBtn && nearbyLineInput) {
