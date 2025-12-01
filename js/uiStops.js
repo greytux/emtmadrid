@@ -2,6 +2,7 @@
 import {
     STOPS,
     STOP_COORDS,
+    userLocation,
     STOP_LINES,
     nearbyLineFilter,
     nearbyStopsCache
@@ -14,7 +15,8 @@ import {
 } from "./apiEmt.js";
 
 const dynamicStopsContainer = document.getElementById("dynamic-stops");
-const myLineInput = document.getElementById("my-line-input"); // si lo usas aquí también
+const nearbyAccordionEl     = document.getElementById("nearby-accordion");
+const myLineInput           = document.getElementById("my-line-input");
 
 function normalizeLine(l) {
     if (l == null) return "";
@@ -485,4 +487,52 @@ export function setupAccordionListeners(root = document) {
             item.classList.toggle("open");
         };
     });
+}
+
+function updateLocationLink(stopId) {
+    const container = document.getElementById(`location-${stopId}`);
+    if (!container) return;
+
+    const coords = STOP_COORDS[stopId];
+    if (!coords) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const mapPointUrl = `https://www.google.com/maps?q=${coords.lat},${coords.lon}`;
+
+    let html = `
+        <a class="location-link"
+           href="${mapPointUrl}"
+           target="_blank"
+           rel="noopener noreferrer">
+           Ver ubicación en mapa
+        </a>
+    `;
+
+    if (userLocation) {
+        const routeUrl =
+            `https://www.google.com/maps/dir/?api=1` +
+            `&origin=${userLocation.lat},${userLocation.lon}` +
+            `&destination=${coords.lat},${coords.lon}` +
+            `&travelmode=walking`;
+
+        html += `
+            <span style="margin: 0 6px; color: #9ca3af;">·</span>
+            <a class="location-link"
+               href="${routeUrl}"
+               target="_blank"
+               rel="noopener noreferrer">
+               Ver ruta andando
+            </a>
+        `;
+    } else {
+        html += `
+            <span style="margin-left: 6px; color: #9ca3af;">
+                (activa la geolocalización para ver la ruta andando)
+            </span>
+        `;
+    }
+
+    container.innerHTML = html;
 }
