@@ -1,279 +1,124 @@
 // main.js
 import {
     STOPS,
-    userLocation,
-    setUserLocation,
     nearbyStopsCache,
     setNearbyStopsCache,
+    nearbyLineFilter,
     setNearbyLineFilter,
+    userLocation,
+    setUserLocation,
+    isApiInCooldown
 } from "./state.js";
 
 import {
-    isInApiCooldown,
-    getNearbyStops,
+    login,
     fetchStopCoords,
+    getNearbyStops,
+    normalizeLinePublic
 } from "./apiEmt.js";
 
 import {
-    refreshStop,            // refresca una parada (llama a getArrivals + renderStop + status)
-    renderNearbyStops,      // pinta las paradas cercanas (usa nearbyLineFilter internamente)
+    renderStop,
+    refreshStop,
+    renderNearbyStops,
     createDynamicStopAccordion,
     filterMyStopsByLine,
-    setupAccordionListeners // engancha los click de los acordeones existentes
+    setupAccordionListeners,
+    updateLocationLink
 } from "./uiStops.js";
 
-import { initSlider } from "./slider.js";
+import { setupSlider } from "./slider.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-    // --- Referencias al DOM ---
-    const globalStatusEl   = document.getElementById("last-update-global");
-    const refreshBtn       = document.getElementById("refresh-now");
+// DOM
+const globalStatusEl = document.getElementById("last-update-global");
+const nearbyStatusEl = document.getElementById("nearby-status");
 
-    const addStopForm      = document.getElementById("add-stop-form");
-    const stopIdInput      = document.getElementById("stop-id-input");
-    const myLineInput      = document.getElementById("my-line-input");
+// Slider init
+const tabs = document.querySelectorAll(".tab-btn");
+const sliderEl = document.querySelector(".slider");
+const slidesContainer = document.getElementById("slides");
 
-    const nearbyStatusEl   = document.getElementById("nearby-status");
-    const nearbyLineInput  = document.getElementById("nearby-line-input");
-    const nearbyApplyBtn   = document.getElementById("nearby-apply");
-    const nearbyClearBtn   = document.getElementById("nearby-clear");
-    const nearbyFilterMsgEl = document.getElementById("nearby-filter-msg");
+const slider = setupSlider(tabs, sliderEl, slidesContainer);
 
-    // --- Slider (tabs + swipe) ---
-    const slider = initSlider(); // { setSlide, getCurrentIndex }
-
-    // --- Helpers ---
-
-    function normalizeLine(l) {
-        if (!l) return "";
-        return String(l).trim().replace(/^0+/, "");
-    }
-
-    // Geolocalización básica
-    function updateUserLocation() {
-        return new Promise((resolve) => {
-            if (!("geolocation" in navigator)) {
-                console.warn("Geolocalización no disponible en este navegador.");
-                if (nearbyStatusEl && !userLocation) {
-                    nearbyStatusEl.textContent =
-                        "Geolocalización no disponible en este dispositivo.";
-                }
-                return resolve(false);
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setUserLocation({
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude,
-                    });
-                    console.log("Ubicación del usuario (refresco):", userLocation);
-                    resolve(true);
-                },
-                (err) => {
-                    console.warn("No se pudo obtener la ubicación:", err.message);
-                    if (nearbyStatusEl && !userLocation) {
-                        nearbyStatusEl.textContent =
-                            "No se ha podido obtener tu ubicación. Revisa permisos de geolocalización.";
-                    }
-                    resolve(false);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 30000,
-                }
-            );
-        });
-    }
-
-    // Refrescar paradas cercanas (wrapper)
-    async function refreshNearbyStopsWrapper() {
-        if (!nearbyStatusEl) return;
-
-        if (!userLocation) {
-            nearbyStatusEl.textContent =
-                "Activa la geolocalización del navegador para ver paradas cercanas.";
-            // Limpia acordeones cercanos
-            await renderNearbyStops([]);
-            return;
-        }
-
-        if (isInApiCooldown()) {
-            nearbyStatusEl.textContent =
-                "Has alcanzado el límite de uso de la API EMT. Espera unos minutos.";
-            await renderNearbyStops([]); // no mostramos nada para no confundir
-            return;
-        }
-
-        nearbyStatusEl.textContent = "Buscando paradas cercanas…";
-
-        try {
-            const stops = await getNearbyStops();
-            setNearbyStopsCache(stops);
-            await renderNearbyStops(stops);
-            nearbyStatusEl.textContent = "Mostrando las paradas cercanas a tu ubicación.";
-        } catch (err) {
-            console.error(err);
-            nearbyStatusEl.textContent =
-                "No se han podido cargar las paradas cercanas.";
-            await renderNearbyStops([]);
-        }
-    }
-
-    // Refresco global
-    async function refreshAll() {
-        if (globalStatusEl) {
-            globalStatusEl.textContent = "Actualizando todas las paradas…";
-        }
-
-        // Si estamos en cooldown, no pegamos a la API
-        if (isInApiCooldown()) {
-            console.warn("API en cooldown, no se harán llamadas nuevas a EMT.");
-            if (globalStatusEl) {
-                globalStatusEl.textContent =
-                    "Has alcanzado el límite de uso de la API EMT. Espera unos minutos.";
-            }
-
-            // Marcamos estados de las paradas favoritas
-            STOPS.forEach(stop => {
-                const statusWrapper = document.getElementById(`status-${stop.id}`);
-                const statusText = statusWrapper?.querySelector("span:nth-child(2)");
-                if (statusWrapper && statusText) {
-                    statusWrapper.classList.add("error");
-                    statusText.textContent =
-                        "Límite de uso de la API EMT. Espera unos minutos.";
-                }
-            });
-
-            if (nearbyStatusEl) {
-                nearbyStatusEl.textContent =
-                    "Límite de uso de la API EMT. No se pueden refrescar paradas cercanas ahora mismo.";
-            }
-
-            return;
-        }
-
-        // 1) Geolocalización
-        await updateUserLocation();
-
-        // 2) Coords de paradas favoritas (3224, 2677, y las que hayas metido en STOPS)
-        await Promise.all(
-            STOPS.map(s => fetchStopCoords(s.id).catch(() => null))
+// Geolocalización…
+async function updateUserLocation() {
+    return new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+                resolve(true);
+            },
+            () => resolve(false)
         );
+    });
+}
 
-        // 3) Refrescar paradas favoritas (fijas + dinámicas ya incluidas en STOPS)
-        await Promise.all(
-            STOPS.map(stop => refreshStop(stop).catch(err => console.error(err)))
-        );
+// Refresco cercano
+async function refreshNearbyStopsWrapper() {
+    if (!userLocation) return renderNearbyStops([]);
 
-        // 4) Refrescar paradas cercanas solo si estamos en la pestaña "Cerca de mí" (index 2)
-        if (slider.getCurrentIndex && slider.getCurrentIndex() === 2) {
-            await refreshNearbyStopsWrapper();
-        }
-
-        if (globalStatusEl) {
-            globalStatusEl.textContent =
-                "Última actualización: " + new Date().toLocaleTimeString("es-ES");
-        }
+    if (isApiInCooldown()) {
+        nearbyStatusEl.textContent = "⚠️ Límite de API alcanzado. Espera unos minutos.";
+        return renderNearbyStops([]);
     }
 
-    // --- Listeners de UI ---
+    const stops = await getNearbyStops(userLocation);
+    setNearbyStopsCache(stops);
+    await renderNearbyStops(stops);
+}
 
-    // Botón refrescar global
-    if (refreshBtn) {
-        refreshBtn.addEventListener("click", async () => {
-            refreshBtn.classList.add("refresh-spin");
-            try {
-                await refreshAll();
-            } finally {
-                setTimeout(() => refreshBtn.classList.remove("refresh-spin"), 600);
-            }
-        });
+// Refresh ALL
+async function refreshAll() {
+    if (globalStatusEl) globalStatusEl.textContent = "Actualizando…";
+
+    if (isApiInCooldown()) {
+        globalStatusEl.textContent = "⏳ API en cooldown. Espera unos minutos.";
+        return;
     }
 
-    // Formulario: añadir parada dinámica
-    if (addStopForm && stopIdInput) {
-        addStopForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const raw = stopIdInput.value.trim();
-            if (!raw) return;
+    await updateUserLocation();
 
-            const stopId = parseInt(raw, 10);
-            if (Number.isNaN(stopId) || stopId <= 0) {
-                alert("Introduce un número de parada válido.");
-                return;
-            }
+    await Promise.all(STOPS.map(s => fetchStopCoords(s.id)));
+    STOPS.forEach(s => updateLocationLink(s.id));
+    await Promise.all(STOPS.map(s => refreshStop(s)));
 
-            await createDynamicStopAccordion(stopId);
-            stopIdInput.value = "";
-        });
-    }
+    await refreshNearbyStopsWrapper();
 
-    // Filtro "Mis paradas" (slide Mis paradas)
-    if (myLineInput) {
-        myLineInput.addEventListener("input", () => {
-            filterMyStopsByLine(myLineInput.value.trim());
-        });
-    }
+    globalStatusEl.textContent = "Última actualización: " + new Date().toLocaleTimeString("es-ES");
+}
 
-    // Filtro paradas cercanas (Aplicar / Quitar)
-    if (nearbyApplyBtn && nearbyLineInput) {
-        nearbyApplyBtn.addEventListener("click", () => {
-            const raw = nearbyLineInput.value.trim();
+// Listeners UI
+document.getElementById("refresh-now").onclick = refreshAll;
 
-            // Sin valor → quitamos filtro y re-renderizamos
-            if (!raw) {
-                setNearbyLineFilter("");
-                if (nearbyFilterMsgEl) nearbyFilterMsgEl.textContent = "";
-                renderNearbyStops(nearbyStopsCache);
-                return;
-            }
+document.getElementById("nearby-apply").onclick = () => {
+    const val = document.getElementById("nearby-line-input").value.trim();
+    setNearbyLineFilter(normalizeLinePublic(val));
+    renderNearbyStops(nearbyStopsCache);
+};
 
-            const normalized = normalizeLine(raw);
-            setNearbyLineFilter(normalized);
+document.getElementById("nearby-clear").onclick = () => {
+    document.getElementById("nearby-line-input").value = "";
+    setNearbyLineFilter("");
+    renderNearbyStops(nearbyStopsCache);
+};
 
-            renderNearbyStops(nearbyStopsCache).then(() => {
-                // Comprobar si alguna parada (cargada) tiene buses
-                let anyMatch = false;
+// Mis paradas filtro
+document.getElementById("my-line-input").oninput = e => {
+    filterMyStopsByLine(e.target.value.trim(), normalizeLinePublic);
+};
 
-                document
-                    .querySelectorAll("#nearby-accordion .bus-list")
-                    .forEach(list => {
-                        if (!list.children.length) return;
-                        const first = list.children[0];
-                        if (!first.classList.contains("empty")) {
-                            anyMatch = true;
-                        }
-                    });
+// Paradas dinámicas
+document.getElementById("add-stop-form").onsubmit = async e => {
+    e.preventDefault();
+    const raw = document.getElementById("stop-id-input").value.trim();
+    const id = parseInt(raw, 10);
+    if (!id) return;
+    await createDynamicStopAccordion(id, fetchStopCoords, normalizeLinePublic);
+    stopIdInput.value = "";
+};
 
-                if (!anyMatch) {
-                    if (nearbyFilterMsgEl) {
-                        nearbyFilterMsgEl.textContent =
-                            "No hay paradas cercanas con buses de esa línea ahora mismo (en las paradas cargadas).";
-                    }
-                } else {
-                    if (nearbyFilterMsgEl) nearbyFilterMsgEl.textContent = "";
-                }
-            });
-        });
-    }
-
-    if (nearbyClearBtn && nearbyLineInput) {
-        nearbyClearBtn.addEventListener("click", () => {
-            nearbyLineInput.value = "";
-            setNearbyLineFilter("");
-            if (nearbyFilterMsgEl) nearbyFilterMsgEl.textContent = "";
-            renderNearbyStops(nearbyStopsCache);
-        });
-    }
-
-    // Engancha los clics de los acordeones que ya vienen en el HTML
-    setupAccordionListeners();
-
-    // Primera carga
-    refreshAll();
-
-    // Auto-refresh cada 60s (puedes dejarlo en 15000 si quieres algo más agresivo)
-    setInterval(refreshAll, 60000);
-});
+// INIT
+setupAccordionListeners();
+slider.setSlide(0);
+refreshAll();
+setInterval(refreshAll, 15000);

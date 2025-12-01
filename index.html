@@ -59,7 +59,6 @@
             -webkit-backdrop-filter: blur(16px);
         }
 
-        /* Header superior */
         .app-header {
             display: flex;
             align-items: center;
@@ -137,7 +136,6 @@
             color: var(--muted);
         }
 
-        /* Legend */
         .legend {
             font-size: 11px;
             color: var(--muted);
@@ -170,7 +168,6 @@
             background: #bbf7d0;
         }
 
-        /* Tabs + Slider */
         .main {
             background: var(--surface);
         }
@@ -500,7 +497,6 @@
             color: var(--muted);
         }
 
-        /* Controles dinámicos */
         .dynamic-controls {
             margin-top: 12px;
             padding: 10px 12px 12px;
@@ -535,7 +531,7 @@
             padding: 6px 8px;
             border-radius: 999px;
             border: 1px solid #cbd5e1;
-            font-size: 16px; /* evita zoom en móvil */
+            font-size: 16px;
             outline: none;
         }
 
@@ -574,7 +570,6 @@
             margin-top: 10px;
         }
 
-        /* Sección de paradas cercanas */
         .nearby-section {
             margin-top: 10px;
             padding: 10px 12px 12px;
@@ -611,17 +606,12 @@
             margin-top: 6px;
         }
 
-        /* Filtros por línea */
         .nearby-filter {
             display: flex;
             flex-direction: column;
             gap: 4px;
             margin-bottom: 6px;
             font-size: 11px;
-        }
-
-        .nearby-filter label {
-            color: var(--muted);
         }
 
         .nearby-filter-row {
@@ -665,11 +655,15 @@
             color: #4b5563;
         }
 
+        .nearby-filter label {
+            color: var(--muted);
+        }
+
         .nearby-line-input {
             padding: 6px 8px;
             border-radius: 999px;
             border: 1px solid #cbd5e1;
-            font-size: 16px; /* evita zoom en móvil */
+            font-size: 16px;
             outline: none;
         }
 
@@ -743,19 +737,16 @@
     </section>
 
     <main class="main">
-        <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" data-index="0">Favoritas</button>
             <button class="tab-btn" data-index="1">Mis paradas</button>
             <button class="tab-btn" data-index="2">Cerca de mí</button>
         </div>
 
-        <!-- Slider -->
         <div class="slider">
             <div class="slides" id="slides">
-                <!-- Slide 0: Paradas favoritas (trabajo + 2677) -->
+                <!-- Slide 0: Favoritas -->
                 <section class="slide accordion" data-slide="0">
-                    <!-- Parada fija 3224 -->
                     <article class="accordion-item open" data-stop-id="3224">
                         <button class="accordion-header">
                             <div class="accordion-header-main">
@@ -776,7 +767,6 @@
                         </div>
                     </article>
 
-                    <!-- Parada fija 2677 -->
                     <article class="accordion-item" data-stop-id="2677">
                         <button class="accordion-header">
                             <div class="accordion-header-main">
@@ -798,7 +788,7 @@
                     </article>
                 </section>
 
-                <!-- Slide 1: Mis paradas (añadir dinámicas + filtro) -->
+                <!-- Slide 1: Mis paradas -->
                 <section class="slide accordion" data-slide="1">
                     <section class="dynamic-controls">
                         <div class="dynamic-title">Añadir otra parada</div>
@@ -833,18 +823,17 @@
                     <div id="dynamic-stops"></div>
                 </section>
 
-                <!-- Slide 2: Paradas cercanas (Top 4 + filtro) -->
+                <!-- Slide 2: Paradas cercanas -->
                 <section class="slide accordion" data-slide="2">
                     <section class="nearby-section">
                         <div class="nearby-title">
                             Paradas cercanas
-                            <span class="nearby-badge">Top 4</span>
+                            <span class="nearby-badge">Top 10</span>
                         </div>
                         <div class="nearby-status" id="nearby-status">
                             Usa el botón de refrescar para buscar paradas cerca de ti.
                         </div>
 
-                        <!-- Filtro por línea -->
                         <div class="nearby-filter">
                             <label for="nearby-line-input">Filtrar paradas cercanas por línea (opcional)</label>
                             <div class="nearby-filter-row">
@@ -872,8 +861,8 @@
         </div>
     </main>
 </div>
-<body>
+
+<!-- Nuevo: script modular -->
 <script type="module" src="./js/main.js"></script>
-</body>
 </body>
 </html>
